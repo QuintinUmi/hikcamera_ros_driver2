@@ -136,19 +136,20 @@ LINK_DIRECTORIES(
 )
 
 ## Declare a C++ library
-add_library(hikcamera_lib
-  include/hikcamera.h
-  lib/hikcamera.cpp
+add_library(hikcamera_sdk
+  include/ICamera.h
+  include/hikcamera_control.h
+  lib/hikcamera_control.cpp
 )
 
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-add_dependencies(hikcamera_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(hikcamera_sdk ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
-target_link_libraries(hikcamera_lib
+target_link_libraries(hikcamera_sdk
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   #  GCBase_gcc421_v3_0
@@ -191,13 +192,13 @@ add_executable(multi_cam_grab src/multi_cam_grab.cpp)
 target_link_libraries(test1
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  hikcamera_lib
+  # hikcamera_lib
 )
 
 target_link_libraries(multi_cam_grab
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  hikcamera_lib
+  # hikcamera_lib
 )
 
 

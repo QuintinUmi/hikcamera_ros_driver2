@@ -1,5 +1,5 @@
-#ifndef HIKCAMERA_ROS_H_
-#define HIKCAMERA_ROS_H_
+#ifndef _HIKCAMERA_ROS_H_
+#define _HIKCAMERA_ROS_H_
 
 #include <condition_variable>
 #include <chrono>
@@ -19,49 +19,20 @@
 
 namespace hikcamera_ros_driver2
 {
-    class Hikcamera
+
+    class HikManager
     {
-        public:
-
-            typedef struct HIKCAMERA_PARAM {
-
-                int width;
-                int height;
-                int Offset_x;
-                int Offset_y;
-                bool FrameRateEnable;
-                int FrameRate;
-
-                int TriggerMode;
-                int LineSelector;
-                int LineMode;
-                int LineSource;
-
-                bool StrobeEnable;
-                int StrobeLineDelay;
-                int StrobeLinePreDelay;
-
-                int ExposureAuto;
-                int ExposureTimeUpper;
-                int ExposureTimeLower;
-                int ExposureTime;
-
-                float Gain;
-                int GainAuto;
-
-                int bayerCvtQuality;
-
-            } HIKCAMERA_PARAM;
-
         public:
 
             
 
+        public:
+
+
+
 
 
         protected:
-
-            HIKCAMERA_PARAM hikcamera_param;
 
             cv::String cameraIntrinsicsPath;
             bool undistortion;
@@ -81,7 +52,10 @@ namespace hikcamera_ros_driver2
 
         private:
 
-            ros::NodeHandle rosHandle;
+            ros::NodeHandle nh;
+            MV_CC_DEVICE_INFO_LIST stDeviceList;
+
+            
 
             void *camHandle;
             int camIndex;
