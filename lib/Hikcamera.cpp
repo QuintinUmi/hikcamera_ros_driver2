@@ -23,18 +23,32 @@ Hikcamera::~Hikcamera()
 
 
 int Hikcamera::init(bool set_param_from_ros) {
-    if (initDevice() != MV_OK) {
+
+    int nRet = MV_OK;
+    int nRet_t = MV_OK;
+
+    nRet = initDevice();
+    if (nRet != MV_OK) {
         ROS_WARN("Incomplete initialization!");
+        nRet_t |= nRet;
     }
 
     loadRosConfig();
 
     if (set_param_from_ros) {
-        if(setParamFromRosServer() != MV_OK) {
+        nRet = setParamFromRosServer();
+        if (nRet != MV_OK) {
             ROS_WARN("Incomplete setParamFromRosServer!");
+            nRet_t |= nRet;
         }
-        initWorkThread(WORK_THREAD_MODE_ROS_PUBLISH);
+        nRet = initWorkThread(WORK_THREAD_MODE_ROS_PUBLISH);
+        if (nRet != MV_OK) {
+            ROS_WARN("Incomplete initWorkThread!");
+            nRet_t |= nRet;
+        }
     }
+
+    return nRet_t;
 }
 
 
@@ -156,47 +170,78 @@ void Hikcamera::loadParamFromRosServer()
 {
 
     /*Image Format Control*/
+    int PixelFormat, ImageCompressionMode;
+
     _nh->param("Width", _HIKCAMERA_PARAM.Width, 2448);
     _nh->param("Height", _HIKCAMERA_PARAM.Height, 2048);
     _nh->param("OffsetX", _HIKCAMERA_PARAM.OffsetX, 0);
     _nh->param("OffsetY", _HIKCAMERA_PARAM.OffsetY, 0);
-    _nh->param("PixelFormat", _HIKCAMERA_PARAM.PixelFormat, MV_PIXEL_FORMAT_BayerBG8);
-    _nh->param("ImageCompressionMode", _HIKCAMERA_PARAM.ImageCompressionMode, MV_IMAGE_COMPRESSION_MODE_HB);
+    _nh->param("PixelFormat", PixelFormat, (int)HIK_PIXEL_FORMAT_BayerBG8);
+    _nh->param("ImageCompressionMode", ImageCompressionMode, (int)HIK_IMAGE_COMPRESSION_MODE_HB);
+
+    _HIKCAMERA_PARAM.PixelFormat = static_cast<HIK_PIXEL_FORMAT>(PixelFormat);
+    _HIKCAMERA_PARAM.ImageCompressionMode = static_cast<HIK_IMAGE_COMPRESSION_MODE>(ImageCompressionMode);
 
     /*Acquisition Control*/
-    _nh->param("AcquisitionLineRate", _HIKCAMERA_PARAM.AcquisitionLineRate, 20);
-    _nh->param("AcquisitionLineRateEnable", _HIKCAMERA_PARAM.AcquisitionLineRateEnable, MV_ACQUISITION_LINE_RATE_ENABLE_ON);
+    int AcquisitionLineRateEnable, TriggerMode, TriggerSource, TriggerActivation, ExposureAuto;
 
-    _nh->param("TriggerMode", _HIKCAMERA_PARAM.TriggerMode, MV_TRIGGER_MODE_ON);
-    _nh->param("TriggerSource", _HIKCAMERA_PARAM.TriggerSource, MV_TRIGGER_SOURCE_Action1_SPECIAL);
-    _nh->param("TriggerActivation", _HIKCAMERA_PARAM.TriggerActivation, MV_TRIGGER_ACTIVATION_RisingEdge);
+    _nh->param("AcquisitionLineRate", _HIKCAMERA_PARAM.AcquisitionLineRate, 20);
+    _nh->param("AcquisitionLineRateEnable", AcquisitionLineRateEnable, (int)HIK_ACQUISITION_LINE_RATE_ENABLE_ON);
+
+    _nh->param("TriggerMode", TriggerMode, (int)HIK_TRIGGER_MODE_ON);
+    _nh->param("TriggerSource", TriggerSource, (int)HIK_TRIGGER_SOURCE_Action1_SPECIAL);
+    _nh->param("TriggerActivation", TriggerActivation, (int)HIK_TRIGGER_ACTIVATION_RisingEdge);
 
     _nh->param("ExposureTime", _HIKCAMERA_PARAM.ExposureTime, 15000.f);
-    _nh->param("ExposureAuto", _HIKCAMERA_PARAM.ExposureAuto, MV_EXPOSURE_AUTO_CONTINUOUS);
+    _nh->param("ExposureAuto", ExposureAuto, (int)HIK_EXPOSURE_AUTO_CONTINUOUS);
     _nh->param("AutoExposureTimeLowerLimit", _HIKCAMERA_PARAM.AutoExposureTimeLowerLimit, 5000);
     _nh->param("AutoExposureTimeUpperLimit", _HIKCAMERA_PARAM.AutoExposureTimeUpperLimit, 45000);
 
+    _HIKCAMERA_PARAM.AcquisitionLineRateEnable = static_cast<HIK_ACQUISITION_LINE_RATE_ENABLE>(AcquisitionLineRateEnable);
+    _HIKCAMERA_PARAM.TriggerMode = static_cast<HIK_TRIGGER_MODE>(TriggerMode);
+    _HIKCAMERA_PARAM.TriggerSource = static_cast<HIK_TRIGGER_SOURCE>(TriggerSource);
+    _HIKCAMERA_PARAM.TriggerActivation = static_cast<HIK_TRIGGER_ACTIVATION>(TriggerActivation);
+    _HIKCAMERA_PARAM.ExposureAuto = static_cast<HIK_EXPOSURE_AUTO>(ExposureAuto);
+
     /*Analog Control*/
+    int GainAuto;
+
     _nh->param("Gain", _HIKCAMERA_PARAM.Gain, 25.f);
-    _nh->param("GainAuto", _HIKCAMERA_PARAM.GainAuto, MV_GAIN_AUTO_CONTINUOUS);
+    _nh->param("GainAuto", GainAuto, (int)HIK_GAIN_AUTO_CONTINUOUS);
     _nh->param("AutoGainLowerLimit", _HIKCAMERA_PARAM.AutoGainLowerLimit, 25.f);
     _nh->param("AutoGainUpperLimit", _HIKCAMERA_PARAM.AutoGainUpperLimit, 0.f);
 
     _nh->param("Brightness", _HIKCAMERA_PARAM.Brightness, 100);
 
+    _HIKCAMERA_PARAM.GainAuto = (HIK_GAIN_AUTO)GainAuto;
+
     /*Digital IO Control*/
-    _nh->param("LineSelector", _HIKCAMERA_PARAM.LineSelector, std::vector<MV_LINE_SELECTOR>{MV_LINE_SELECTOR_Line1});
-    _nh->param("LineMode", _HIKCAMERA_PARAM.LineMode, std::vector<MV_LINE_MODE>{MV_LINE_MODE_Strobe});
+    std::vector<int> LineSelector, LineMode, StrobeEnable, LineSource;
+
+    _nh->param("LineSelector", LineSelector, std::vector<int>{(int)HIK_LINE_SELECTOR_Line1});
+    _nh->param("LineMode", LineMode, std::vector<int>{(int)HIK_LINE_MODE_Strobe});
     _nh->param("LineDebouncerTime", _HIKCAMERA_PARAM.LineDebouncerTime, std::vector<int>{50});
-    _nh->param("StrobeEnable", _HIKCAMERA_PARAM.StrobeEnable, std::vector<MV_STROBE_ENABLE>{MV_STROBE_ENABLE_OFF});
-    _nh->param("LineSource", _HIKCAMERA_PARAM.LineSource, std::vector<MV_LINE_SOURCE>{MV_LINE_SOURCE_ExposureStartActive});
+    _nh->param("StrobeEnable", StrobeEnable, std::vector<int>{(int)HIK_STROBE_ENABLE_OFF});
+    _nh->param("LineSource", LineSource, std::vector<int>{(int)HIK_LINE_SOURCE_ExposureStartActive});
     _nh->param("StrobeLineDuration", _HIKCAMERA_PARAM.StrobeLineDuration, std::vector<int>{0});
     _nh->param("StrobeLineDelay", _HIKCAMERA_PARAM.StrobeLineDelay, std::vector<int>{0});
     _nh->param("StrobeLinePreDelay", _HIKCAMERA_PARAM.StrobeLinePreDelay, std::vector<int>{0});
 
-    /*Transport Layer Control*/
-    _nh->param("GevIEEE1588", _HIKCAMERA_PARAM.GevIEEE1588, MV_GEV_IEEE_1588_ON);
+    for (int num : LineSelector) 
+        _HIKCAMERA_PARAM.LineSelector.push_back(static_cast<HIK_LINE_SELECTOR>(num));
+    for (int num : LineMode) 
+        _HIKCAMERA_PARAM.LineMode.push_back(static_cast<HIK_LINE_MODE>(num));
+    for (int num : StrobeEnable) 
+        _HIKCAMERA_PARAM.StrobeEnable.push_back(static_cast<HIK_STROBE_ENABLE>(num));
+    for (int num : LineSource) 
+        _HIKCAMERA_PARAM.LineSource.push_back(static_cast<HIK_LINE_SOURCE>(num));
 
+    /*Transport Layer Control*/
+    int GevIEEE1588;
+
+    _nh->param("GevIEEE1588", GevIEEE1588, (int)HIK_GEV_IEEE_1588_ON);
+
+    _HIKCAMERA_PARAM.GevIEEE1588 = static_cast<HIK_GEV_IEEE_1588>(GevIEEE1588);
 }
 
 void Hikcamera::loadRosConfig() {
@@ -232,7 +277,7 @@ int Hikcamera::setParamFromRosServer() {
 }
 
 int Hikcamera::setImageFormat(int Width, int Height, int OffsetX, int OffsetY, 
-                            MV_PIXEL_FORMAT PixelFormat, MV_IMAGE_COMPRESSION_MODE ImageCompressionMode) 
+                            HIK_PIXEL_FORMAT PixelFormat, HIK_IMAGE_COMPRESSION_MODE ImageCompressionMode) 
 {
     int nRet = MV_OK;
     int nRet_t = MV_OK;
@@ -282,7 +327,7 @@ int Hikcamera::setImageFormat(int Width, int Height, int OffsetX, int OffsetY,
     return nRet_t;
 }
 
-int Hikcamera::setAcquisitionRate(MV_ACQUISITION_LINE_RATE_ENABLE AcquisitionLineRateEnable, int AcquisitionLineRate)
+int Hikcamera::setAcquisitionRate(HIK_ACQUISITION_LINE_RATE_ENABLE AcquisitionLineRateEnable, int AcquisitionLineRate)
 {
     int nRet = MV_OK;
     int nRet_t = MV_OK;
@@ -294,7 +339,7 @@ int Hikcamera::setAcquisitionRate(MV_ACQUISITION_LINE_RATE_ENABLE AcquisitionLin
         nRet_t |= nRet;
     }
 
-    if (AcquisitionLineRateEnable == MV_ACQUISITION_LINE_RATE_ENABLE_ON) {
+    if (AcquisitionLineRateEnable == HIK_ACQUISITION_LINE_RATE_ENABLE_ON) {
         nRet = MV_CC_SetIntValue(_handle, "AcquisitionLineRate", AcquisitionLineRate);
         if (MV_OK != nRet)
         {
@@ -306,7 +351,7 @@ int Hikcamera::setAcquisitionRate(MV_ACQUISITION_LINE_RATE_ENABLE AcquisitionLin
     return nRet_t;
 }
 
-int Hikcamera::setTrigger(MV_TRIGGER_MODE TriggerMode, MV_TRIGGER_SOURCE TriggerSource, MV_TRIGGER_ACTIVATION TriggerActivation)
+int Hikcamera::setTrigger(HIK_TRIGGER_MODE TriggerMode, HIK_TRIGGER_SOURCE TriggerSource, HIK_TRIGGER_ACTIVATION TriggerActivation)
 {
     int nRet = MV_OK;
     int nRet_t = MV_OK;
@@ -318,7 +363,7 @@ int Hikcamera::setTrigger(MV_TRIGGER_MODE TriggerMode, MV_TRIGGER_SOURCE Trigger
         nRet_t |= nRet;
     }
 
-    if (TriggerSource == MV_TRIGGER_SOURCE_Action1_SPECIAL) {
+    if (TriggerSource == HIK_TRIGGER_SOURCE_Action1_SPECIAL) {
 
         nRet = MV_CC_SetEnumValueByString(_handle, "TriggerSource", "Action1");
         if (MV_OK != nRet)
@@ -368,7 +413,7 @@ int Hikcamera::setTrigger(MV_TRIGGER_MODE TriggerMode, MV_TRIGGER_SOURCE Trigger
     return nRet_t;
 }
 
-int Hikcamera::setExplosure(MV_EXPOSURE_AUTO ExposureAuto, float ExposureTime, 
+int Hikcamera::setExplosure(HIK_EXPOSURE_AUTO ExposureAuto, float ExposureTime, 
                             int AutoExposureTimeLowerLimit, int AutoExposureTimeUpperLimit)
 {
     int nRet = MV_OK;
@@ -405,7 +450,7 @@ int Hikcamera::setExplosure(MV_EXPOSURE_AUTO ExposureAuto, float ExposureTime,
     return nRet_t;
 }
 
-int Hikcamera::setGain(MV_GAIN_AUTO GainAuto, float Gain, float AutoGainLowerLimit, float AutoGainUpperLimit)
+int Hikcamera::setGain(HIK_GAIN_AUTO GainAuto, float Gain, float AutoGainLowerLimit, float AutoGainUpperLimit)
 {
     int nRet = MV_OK;
     int nRet_t = MV_OK;
@@ -454,9 +499,9 @@ int Hikcamera::setBrightness(int Brightness)
     return nRet;
 }
 
-int Hikcamera::setLineIO(MV_LINE_SELECTOR LineSelector, MV_LINE_MODE LineMode, 
+int Hikcamera::setLineIO(HIK_LINE_SELECTOR LineSelector, HIK_LINE_MODE LineMode, 
                         int LineDebouncerTime,
-                        MV_STROBE_ENABLE StrobeEnable, MV_LINE_SOURCE LineSource, 
+                        HIK_STROBE_ENABLE StrobeEnable, HIK_LINE_SOURCE LineSource, 
                         int StrobeLineDuration, int StrobeLineDelay, int StrobeLinePreDelay)
 {
     int nRet = MV_OK;
@@ -476,7 +521,7 @@ int Hikcamera::setLineIO(MV_LINE_SELECTOR LineSelector, MV_LINE_MODE LineMode,
         nRet_t |= nRet;
     }
 
-    if (LineMode == MV_LINE_MODE_Input) {
+    if (LineMode == HIK_LINE_MODE_Input) {
 
         nRet = MV_CC_SetIntValue(_handle, "LineDebouncerTime", LineDebouncerTime);
         if (MV_OK != nRet)
@@ -485,7 +530,7 @@ int Hikcamera::setLineIO(MV_LINE_SELECTOR LineSelector, MV_LINE_MODE LineMode,
             nRet_t |= nRet;
         }
 
-    } else if (LineMode == MV_LINE_MODE_Strobe) {
+    } else if (LineMode == HIK_LINE_MODE_Strobe) {
 
         nRet = MV_CC_SetEnumValue(_handle, "LineSource", LineSource);
         if (MV_OK != nRet)
@@ -526,9 +571,9 @@ int Hikcamera::setLineIO(MV_LINE_SELECTOR LineSelector, MV_LINE_MODE LineMode,
     return nRet_t;
 }
 
-int Hikcamera::setLineIOBatch(std::vector<MV_LINE_SELECTOR> LineSelector, std::vector<MV_LINE_MODE> LineMode,
+int Hikcamera::setLineIOBatch(std::vector<HIK_LINE_SELECTOR> LineSelector, std::vector<HIK_LINE_MODE> LineMode,
                                 std::vector<int> LineDebouncerTime,
-                                std::vector<MV_STROBE_ENABLE> StrobeEnable, std::vector<MV_LINE_SOURCE> LineSource,
+                                std::vector<HIK_STROBE_ENABLE> StrobeEnable, std::vector<HIK_LINE_SOURCE> LineSource,
                                 std::vector<int> StrobeLineDuration, std::vector<int> StrobeLineDelay, std::vector<int> StrobeLinePreDelay)
 {
     int nRet = MV_OK;
@@ -549,7 +594,7 @@ int Hikcamera::setLineIOBatch(std::vector<MV_LINE_SELECTOR> LineSelector, std::v
     return nRet_t;
 }
 
-int Hikcamera::setTransportLayerControl(MV_GEV_IEEE_1588 GevIEEE1588)
+int Hikcamera::setTransportLayerControl(HIK_GEV_IEEE_1588 GevIEEE1588)
 {
     int nRet = MV_OK;
 
@@ -710,68 +755,68 @@ void Hikcamera::ImageReceivedCallBackWorkThread()
 
 
 
-cv::Mat Hikcamera::imageMvToCv(const MV_FRAME_OUT& stFrameOut, MV_PIXEL_FORMAT mv_format) {
+cv::Mat Hikcamera::imageMvToCv(const MV_FRAME_OUT& stFrameOut, HIK_PIXEL_FORMAT mv_format) {
     switch (mv_format) {
-        case MV_PIXEL_FORMAT_Mono8:
+        case HIK_PIXEL_FORMAT_Mono8:
             return cv::Mat(stFrameOut.stFrameInfo.nHeight, stFrameOut.stFrameInfo.nWidth, CV_8UC1, stFrameOut.pBufAddr);
-        case MV_PIXEL_FORMAT_Mono10:
-        case MV_PIXEL_FORMAT_Mono12:
-        case MV_PIXEL_FORMAT_Mono16:
+        case HIK_PIXEL_FORMAT_Mono10:
+        case HIK_PIXEL_FORMAT_Mono12:
+        case HIK_PIXEL_FORMAT_Mono16:
             return cv::Mat(stFrameOut.stFrameInfo.nHeight, stFrameOut.stFrameInfo.nWidth, CV_16UC1, stFrameOut.pBufAddr);
-        case MV_PIXEL_FORMAT_RGB8Packed:
+        case HIK_PIXEL_FORMAT_RGB8Packed:
             return cv::Mat(stFrameOut.stFrameInfo.nHeight, stFrameOut.stFrameInfo.nWidth, CV_8UC3, stFrameOut.pBufAddr);
-        case MV_PIXEL_FORMAT_YUV422_8:
-        case MV_PIXEL_FORMAT_YUV422_8_UYVY:
+        case HIK_PIXEL_FORMAT_YUV422_8:
+        case HIK_PIXEL_FORMAT_YUV422_8_UYVY:
             return cv::Mat(stFrameOut.stFrameInfo.nHeight, stFrameOut.stFrameInfo.nWidth, CV_8UC2, stFrameOut.pBufAddr);
-        case MV_PIXEL_FORMAT_BayerGR8:
-        case MV_PIXEL_FORMAT_BayerRG8:
-        case MV_PIXEL_FORMAT_BayerGB8:
-        case MV_PIXEL_FORMAT_BayerBG8:
+        case HIK_PIXEL_FORMAT_BayerGR8:
+        case HIK_PIXEL_FORMAT_BayerRG8:
+        case HIK_PIXEL_FORMAT_BayerGB8:
+        case HIK_PIXEL_FORMAT_BayerBG8:
             return cv::Mat(stFrameOut.stFrameInfo.nHeight, stFrameOut.stFrameInfo.nWidth, CV_8UC1, stFrameOut.pBufAddr);
         default:
             throw std::runtime_error("Unsupported pixel format");
     }
 }
 
-sensor_msgs::ImagePtr Hikcamera::imageCvToRos(const cv::Mat& cv_image, MV_PIXEL_FORMAT mv_format) {
+sensor_msgs::ImagePtr Hikcamera::imageCvToRos(const cv::Mat& cv_image, HIK_PIXEL_FORMAT mv_format) {
 
     cv::Mat output;
     switch (mv_format) {
-        case MV_PIXEL_FORMAT_Mono8:
+        case HIK_PIXEL_FORMAT_Mono8:
             output = cv_image;  // 直接使用输入的单通道 8 位灰度图像
             break;
-        case MV_PIXEL_FORMAT_Mono10:
-        case MV_PIXEL_FORMAT_Mono12:
-        case MV_PIXEL_FORMAT_Mono16:
+        case HIK_PIXEL_FORMAT_Mono10:
+        case HIK_PIXEL_FORMAT_Mono12:
+        case HIK_PIXEL_FORMAT_Mono16:
             {
                 // 计算最大值
-                double maxVal = (mv_format == MV_PIXEL_FORMAT_Mono10) ? 1023.0 :
-                                (mv_format == MV_PIXEL_FORMAT_Mono12) ? 4095.0 : 65535.0;
+                double maxVal = (mv_format == HIK_PIXEL_FORMAT_Mono10) ? 1023.0 :
+                                (mv_format == HIK_PIXEL_FORMAT_Mono12) ? 4095.0 : 65535.0;
                 cv_image.convertTo(output, CV_8U, 255.0 / maxVal);  // 缩放到 8 位
             }
             break;  
-        case MV_PIXEL_FORMAT_RGB8Packed:
+        case HIK_PIXEL_FORMAT_RGB8Packed:
             output = cv_image;
             break;
-        case MV_PIXEL_FORMAT_YUV422_8:
-        case MV_PIXEL_FORMAT_YUV422_8_UYVY:
+        case HIK_PIXEL_FORMAT_YUV422_8:
+        case HIK_PIXEL_FORMAT_YUV422_8_UYVY:
             cv::cvtColor(cv_image, output, cv::COLOR_YUV2RGB_UYVY);
             break;
-        case MV_PIXEL_FORMAT_BayerGR8:
+        case HIK_PIXEL_FORMAT_BayerGR8:
             cv::cvtColor(cv_image, output, cv::COLOR_BayerGR2RGB);
             break;
-        case MV_PIXEL_FORMAT_BayerRG8:
+        case HIK_PIXEL_FORMAT_BayerRG8:
             cv::cvtColor(cv_image, output, cv::COLOR_BayerRG2RGB);
             break;
-        case MV_PIXEL_FORMAT_BayerGB8:
+        case HIK_PIXEL_FORMAT_BayerGB8:
             cv::cvtColor(cv_image, output, cv::COLOR_BayerGB2RGB);
             break;
-        case MV_PIXEL_FORMAT_BayerBG8:
+        case HIK_PIXEL_FORMAT_BayerBG8:
             cv::cvtColor(cv_image, output, cv::COLOR_BayerBG2RGB);
             break;
-        case MV_PIXEL_FORMAT_BayerGB10:
-        case MV_PIXEL_FORMAT_BayerGB12:
-        case MV_PIXEL_FORMAT_BayerGB12Packed:
+        case HIK_PIXEL_FORMAT_BayerGB10:
+        case HIK_PIXEL_FORMAT_BayerGB12:
+        case HIK_PIXEL_FORMAT_BayerGB12Packed:
             {
                 cv::Mat scaled;
                 cv_image.convertTo(scaled, CV_8U, 1.0 / 16.0);  
@@ -783,21 +828,21 @@ sensor_msgs::ImagePtr Hikcamera::imageCvToRos(const cv::Mat& cv_image, MV_PIXEL_
     }
 
     switch (mv_format) {
-        case MV_PIXEL_FORMAT_Mono8:
-        case MV_PIXEL_FORMAT_Mono10:
-        case MV_PIXEL_FORMAT_Mono12:
-        case MV_PIXEL_FORMAT_Mono16:
+        case HIK_PIXEL_FORMAT_Mono8:
+        case HIK_PIXEL_FORMAT_Mono10:
+        case HIK_PIXEL_FORMAT_Mono12:
+        case HIK_PIXEL_FORMAT_Mono16:
             return cv_bridge::CvImage(std_msgs::Header(), "mono8", output).toImageMsg(); 
-        case MV_PIXEL_FORMAT_RGB8Packed:
-        case MV_PIXEL_FORMAT_YUV422_8:
-        case MV_PIXEL_FORMAT_YUV422_8_UYVY:
-        case MV_PIXEL_FORMAT_BayerGR8:
-        case MV_PIXEL_FORMAT_BayerRG8:
-        case MV_PIXEL_FORMAT_BayerGB8:
-        case MV_PIXEL_FORMAT_BayerBG8:
-        case MV_PIXEL_FORMAT_BayerGB10:
-        case MV_PIXEL_FORMAT_BayerGB12:
-        case MV_PIXEL_FORMAT_BayerGB12Packed:
+        case HIK_PIXEL_FORMAT_RGB8Packed:
+        case HIK_PIXEL_FORMAT_YUV422_8:
+        case HIK_PIXEL_FORMAT_YUV422_8_UYVY:
+        case HIK_PIXEL_FORMAT_BayerGR8:
+        case HIK_PIXEL_FORMAT_BayerRG8:
+        case HIK_PIXEL_FORMAT_BayerGB8:
+        case HIK_PIXEL_FORMAT_BayerBG8:
+        case HIK_PIXEL_FORMAT_BayerGB10:
+        case HIK_PIXEL_FORMAT_BayerGB12:
+        case HIK_PIXEL_FORMAT_BayerGB12Packed:
             return cv_bridge::CvImage(std_msgs::Header(), "rgb8", output).toImageMsg(); 
         default:
             throw std::runtime_error("Unsupported pixel format for RGB conversion");
@@ -846,28 +891,3 @@ std::string Hikcamera::timestampToSeconds(uint64_t timestamp_ns) {
 
 
 
-bool printDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
-{
-    if (NULL == pstMVDevInfo)
-    {
-        printf("The Pointer of pstMVDevInfo is NULL!\n");
-        return false;
-    }
-    if (pstMVDevInfo->nTLayerType == MV_GIGE_DEVICE)
-    {
-        int nIp1 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0xff000000) >> 24);
-        int nIp2 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x00ff0000) >> 16);
-        int nIp3 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8);
-        int nIp4 = (pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff);
-
-        // print current ip and user defined name
-        printf("CurrentIp: %d.%d.%d.%d\n" , nIp1, nIp2, nIp3, nIp4);
-        printf("UserDefinedName: %s\n\n" , pstMVDevInfo->SpecialInfo.stGigEInfo.chUserDefinedName);
-    }
-    else
-    {
-        printf("Not support.\n");
-    }
-
-    return true;
-}
