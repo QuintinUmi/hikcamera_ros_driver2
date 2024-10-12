@@ -63,6 +63,10 @@ typedef enum _MV_TRIGGER_SOURCE_ // TriggerSource
 // nRet = MV_CC_SetEnumValueByString(handle, "TriggerSource", MV_Action1);
 #define MV_TRIGGER_SOURCE_Action1 "Action1"
 
+#define ActionDeviceKey 1
+#define ActionGroupKey 1
+#define ActionGroupMask 1
+
 
 typedef enum _MV_TRIGGER_ACTIVATION_ // TriggerActivation
 {

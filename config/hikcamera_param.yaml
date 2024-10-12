@@ -1,0 +1,41 @@
+# Image Format Control
+Width: 2448
+Height: 2048
+OffsetX: 0
+OffsetY: 0
+PixelFormat: 17301515 # BayerGB 8
+ImageCompressionMode: 2
+
+# Acquisition Control
+AcquisitionLineRate: 20
+AcquisitionLineRateEnable: 1
+
+TriggerMode: 1
+TriggerSource: -1
+TriggerActivation: 0
+
+ExposureTime: 15000.0
+ExposureAuto: 2
+AutoExposureTimeLowerLimit: 5000
+AutoExposureTimeUpperLimit: 45000
+
+# Analog Control
+Gain: 25.0
+GainAuto: 2
+AutoGainLowerLimit: 25.0
+AutoGainupperLimit: 0.0
+
+Brightness: 100
+
+# Digital IO Control
+LineSelector: [0, 1]
+LineMode: [0, 8]
+LineDebouncerTime: [50, 50]
+StrobeEnable: [0, 1]
+LineSource: [0, 0]
+StrobeLineDuration: [0, 0]
+StrobeLineDelay: [0, 0]
+StrobeLinePreDelay: [0, 0]
+
+# Transport Layer Control
+GevIEEE1588: 1
