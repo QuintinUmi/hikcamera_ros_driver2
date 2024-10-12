@@ -52,33 +52,33 @@ namespace hikcamera_ros_driver2{
             int setParamFromRosServer();
             
             int setImageFormat(int Width, int Height, int OffsetX, int OffsetY, 
-                                MV_PIXEL_FORMAT PixelFormat, MV_IMAGE_COMPRESSION_MODE ImageCompressionMode);
+                                HIK_PIXEL_FORMAT PixelFormat, HIK_IMAGE_COMPRESSION_MODE ImageCompressionMode);
 
-            int setAcquisitionRate(MV_ACQUISITION_LINE_RATE_ENABLE AcquisitionLineRateEnable,
+            int setAcquisitionRate(HIK_ACQUISITION_LINE_RATE_ENABLE AcquisitionLineRateEnable,
                                     int AcquisitionLineRate);
-            int setTrigger(MV_TRIGGER_MODE TriggerMode, MV_TRIGGER_SOURCE TriggerSource, MV_TRIGGER_ACTIVATION TriggerActivation);
-            int setExplosure(MV_EXPOSURE_AUTO ExposureAuto, float ExposureTime, int AutoExposureTimeLowerLimit, int AutoExposureTimeUpperLimit);
+            int setTrigger(HIK_TRIGGER_MODE TriggerMode, HIK_TRIGGER_SOURCE TriggerSource, HIK_TRIGGER_ACTIVATION TriggerActivation);
+            int setExplosure(HIK_EXPOSURE_AUTO ExposureAuto, float ExposureTime, int AutoExposureTimeLowerLimit, int AutoExposureTimeUpperLimit);
             
-            int setGain(MV_GAIN_AUTO GainAuto, float Gain, float AutoGainLowerLimit, float AutoGainUpperLimit);
+            int setGain(HIK_GAIN_AUTO GainAuto, float Gain, float AutoGainLowerLimit, float AutoGainUpperLimit);
             int setBrightness(int Brightness);
             
-            int setLineIO(MV_LINE_SELECTOR LineSelector, MV_LINE_MODE LineMode, 
+            int setLineIO(HIK_LINE_SELECTOR LineSelector, HIK_LINE_MODE LineMode, 
                             int LineDebouncerTime,
-                            MV_STROBE_ENABLE StrobeEnable, MV_LINE_SOURCE LineSource, 
+                            HIK_STROBE_ENABLE StrobeEnable, HIK_LINE_SOURCE LineSource, 
                             int StrobeLineDuration, int StrobeLineDelay, int StrobeLinePreDelay);
-            int setLineIOBatch(std::vector<MV_LINE_SELECTOR> LineSelector, std::vector<MV_LINE_MODE> LineMode,
+            int setLineIOBatch(std::vector<HIK_LINE_SELECTOR> LineSelector, std::vector<HIK_LINE_MODE> LineMode,
                                 std::vector<int> LineDebouncerTime,
-                                std::vector<MV_STROBE_ENABLE> StrobeEnable, std::vector<MV_LINE_SOURCE> LineSource,
+                                std::vector<HIK_STROBE_ENABLE> StrobeEnable, std::vector<HIK_LINE_SOURCE> LineSource,
                                 std::vector<int> StrobeLineDuration, std::vector<int> StrobeLineDelay, std::vector<int> StrobeLinePreDelay);
 
-            int setTransportLayerControl(MV_GEV_IEEE_1588 GevIEEE1588);
+            int setTransportLayerControl(HIK_GEV_IEEE_1588 GevIEEE1588);
             
 
             int startGrabbing();
             int stopGrabbing();
             
-            static cv::Mat imageMvToCv(const MV_FRAME_OUT& stFrameOut, MV_PIXEL_FORMAT mv_format);
-            static sensor_msgs::ImagePtr imageCvToRos(const cv::Mat& cv_image, MV_PIXEL_FORMAT mv_format);
+            static cv::Mat imageMvToCv(const MV_FRAME_OUT& stFrameOut, HIK_PIXEL_FORMAT hik_format);
+            static sensor_msgs::ImagePtr imageCvToRos(const cv::Mat& cv_image, HIK_PIXEL_FORMAT hik_format);
 
 
             static uint64_t nDevTimeStampCov(unsigned int nDevTimeStampHigh, unsigned int nDevTimeStampLow);
@@ -137,42 +137,42 @@ namespace hikcamera_ros_driver2{
                 int Height;
                 int OffsetX;
                 int OffsetY;
-                MV_PIXEL_FORMAT PixelFormat;
-                MV_IMAGE_COMPRESSION_MODE ImageCompressionMode;
+                HIK_PIXEL_FORMAT PixelFormat;
+                HIK_IMAGE_COMPRESSION_MODE ImageCompressionMode;
 
                 /*Acquisition Control*/
                 int AcquisitionLineRate;
-                MV_ACQUISITION_LINE_RATE_ENABLE AcquisitionLineRateEnable;
+                HIK_ACQUISITION_LINE_RATE_ENABLE AcquisitionLineRateEnable;
 
-                MV_TRIGGER_MODE TriggerMode;
-                MV_TRIGGER_SOURCE TriggerSource;
-                MV_TRIGGER_ACTIVATION TriggerActivation;
+                HIK_TRIGGER_MODE TriggerMode;
+                HIK_TRIGGER_SOURCE TriggerSource;
+                HIK_TRIGGER_ACTIVATION TriggerActivation;
 
                 float ExposureTime;
-                MV_EXPOSURE_AUTO ExposureAuto;
+                HIK_EXPOSURE_AUTO ExposureAuto;
                 int AutoExposureTimeLowerLimit;
                 int AutoExposureTimeUpperLimit;
 
                 /*Analog Control*/
                 float Gain;
-                MV_GAIN_AUTO GainAuto;
+                HIK_GAIN_AUTO GainAuto;
                 float AutoGainLowerLimit;
                 float AutoGainUpperLimit;
 
                 int Brightness;
 
                 /*Digital IO Control*/
-                std::vector<MV_LINE_SELECTOR> LineSelector;
-                std::vector<MV_LINE_MODE> LineMode;
+                std::vector<HIK_LINE_SELECTOR> LineSelector;
+                std::vector<HIK_LINE_MODE> LineMode;
                 std::vector<int> LineDebouncerTime;
-                std::vector<MV_STROBE_ENABLE> StrobeEnable;
-                std::vector<MV_LINE_SOURCE> LineSource;
+                std::vector<HIK_STROBE_ENABLE> StrobeEnable;
+                std::vector<HIK_LINE_SOURCE> LineSource;
                 std::vector<int> StrobeLineDuration;
                 std::vector<int> StrobeLineDelay;
                 std::vector<int> StrobeLinePreDelay;
 
                 /*Transport Layer Control*/
-                MV_GEV_IEEE_1588 GevIEEE1588;
+                HIK_GEV_IEEE_1588 GevIEEE1588;
 
             } _HIKCAMERA_PARAM;
 
@@ -184,23 +184,23 @@ namespace hikcamera_ros_driver2{
     };
 
 
-    bool printDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
+    bool printDeviceInfo(MV_CC_DEVICE_INFO* pstHIKDevInfo)
     {
-        if (NULL == pstMVDevInfo)
+        if (NULL == pstHIKDevInfo)
         {
-            printf("The Pointer of pstMVDevInfo is NULL!\n");
+            printf("The Pointer of pstHIKDevInfo is NULL!\n");
             return false;
         }
-        if (pstMVDevInfo->nTLayerType == MV_GIGE_DEVICE)
+        if (pstHIKDevInfo->nTLayerType == MV_GIGE_DEVICE)
         {
-            int nIp1 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0xff000000) >> 24);
-            int nIp2 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x00ff0000) >> 16);
-            int nIp3 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8);
-            int nIp4 = (pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff);
+            int nIp1 = ((pstHIKDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0xff000000) >> 24);
+            int nIp2 = ((pstHIKDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x00ff0000) >> 16);
+            int nIp3 = ((pstHIKDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8);
+            int nIp4 = (pstHIKDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff);
 
             // print current ip and user defined name
             printf("CurrentIp: %d.%d.%d.%d\n" , nIp1, nIp2, nIp3, nIp4);
-            printf("UserDefinedName: %s\n\n" , pstMVDevInfo->SpecialInfo.stGigEInfo.chUserDefinedName);
+            printf("UserDefinedName: %s\n\n" , pstHIKDevInfo->SpecialInfo.stGigEInfo.chUserDefinedName);
         }
         else
         {

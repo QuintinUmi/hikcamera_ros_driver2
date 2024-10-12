@@ -23,14 +23,7 @@ namespace hikcamera_ros_driver2 {
             void startAllCamerasGrabbing();
             void stopAllCamerasGrabbing();
 
-            // 获取指定索引的相机
-            Hikcamera* getCamera(uint8_t camera_index) {
-                auto it = _cameras.find(camera_index);
-                if (it != _cameras.end()) {
-                    return it->second;
-                }
-                return nullptr;
-            }
+            Hikcamera* getCamera(uint8_t camera_index);
 
         private:
             std::map<uint8_t, Hikcamera*> _cameras; // 使用map管理相机，key为相机索引
