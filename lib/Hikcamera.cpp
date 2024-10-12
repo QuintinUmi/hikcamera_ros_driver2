@@ -10,9 +10,19 @@ Hikcamera::Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index)
 
 }
 
-Hikcamera::Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index, ros::NodeHandle* nh, bool set_param_from_ros) : 
+Hikcamera::Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index, ros::NodeHandle* nh) : 
                     _pDeviceInfo(pDeviceInfo), _nh(nh), _camera_index(camera_index), _work_thread_mode(WORK_THREAD_MODE_NOT_SELECTED)
 {
+    
+}
+
+Hikcamera::~Hikcamera() 
+{
+    deinitDevice();
+}
+
+
+int Hikcamera::init(bool set_param_from_ros) {
     if (initDevice() != MV_OK) {
         ROS_WARN("Incomplete initialization!");
     }
@@ -25,11 +35,6 @@ Hikcamera::Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index, ros::
         }
         initWorkThread(WORK_THREAD_MODE_ROS_PUBLISH);
     }
-}
-
-Hikcamera::~Hikcamera() 
-{
-    deinitDevice();
 }
 
 
@@ -841,7 +846,7 @@ std::string Hikcamera::timestampToSeconds(uint64_t timestamp_ns) {
 
 
 
-bool Hikcamera::printDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
+bool printDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
 {
     if (NULL == pstMVDevInfo)
     {

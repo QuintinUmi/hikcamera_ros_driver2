@@ -36,9 +36,10 @@ namespace hikcamera_ros_driver2{
 
         public:
             Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index);
-            Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index, ros::NodeHandle* nh, bool set_param_from_ros = true);
+            Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index, ros::NodeHandle* nh);
             ~Hikcamera();
 
+            int init(bool set_param_from_ros = true);
             int initDevice();
             int deinitDevice();
             int initWorkThread(WORK_THREAD_MODE work_thread_mode = WORK_THREAD_MODE_ROS_PUBLISH);
@@ -96,8 +97,6 @@ namespace hikcamera_ros_driver2{
             
 
         private:
-
-            bool printDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo);
 
             void GetFrameWorkThread();
             void RosPublishWorkThread();
@@ -182,8 +181,34 @@ namespace hikcamera_ros_driver2{
                 bool publish_compressed;
             } _ROS_PARAM;
             
-        };
+    };
 
+
+    bool printDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
+    {
+        if (NULL == pstMVDevInfo)
+        {
+            printf("The Pointer of pstMVDevInfo is NULL!\n");
+            return false;
+        }
+        if (pstMVDevInfo->nTLayerType == MV_GIGE_DEVICE)
+        {
+            int nIp1 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0xff000000) >> 24);
+            int nIp2 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x00ff0000) >> 16);
+            int nIp3 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8);
+            int nIp4 = (pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff);
+
+            // print current ip and user defined name
+            printf("CurrentIp: %d.%d.%d.%d\n" , nIp1, nIp2, nIp3, nIp4);
+            printf("UserDefinedName: %s\n\n" , pstMVDevInfo->SpecialInfo.stGigEInfo.chUserDefinedName);
+        }
+        else
+        {
+            printf("Not support.\n");
+        }
+
+        return true;
+    }
 }
 
 
