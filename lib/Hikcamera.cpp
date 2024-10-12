@@ -3,26 +3,37 @@
 
 using namespace hikcamera_ros_driver2;
 
-Hikcamera::Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, ros::NodeHandle* nh, bool is_set_param_from_ros) : _pDeviceInfo(pDeviceInfo), _nh(nh) 
+#define IS_SHOW_FRAME_INFO false
+
+Hikcamera::Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index) 
 {
-    if (init_device() != MV_OK) {
+
+}
+
+Hikcamera::Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index, ros::NodeHandle* nh, bool set_param_from_ros) : 
+                    _pDeviceInfo(pDeviceInfo), _nh(nh), _camera_index(camera_index), _work_thread_mode(WORK_THREAD_MODE_NOT_SELECTED)
+{
+    if (initDevice() != MV_OK) {
         ROS_WARN("Incomplete initialization!");
     }
 
-    if (is_set_param_from_ros) {
+    loadRosConfig();
+
+    if (set_param_from_ros) {
         if(setParamFromRosServer() != MV_OK) {
             ROS_WARN("Incomplete setParamFromRosServer!");
         }
+        initWorkThread(WORK_THREAD_MODE_ROS_PUBLISH);
     }
 }
 
 Hikcamera::~Hikcamera() 
 {
-    // Destructor logic, maybe clean up resources
+    deinitDevice();
 }
 
 
-int Hikcamera::init_device()
+int Hikcamera::initDevice()
 {
     int nRet = MV_OK;
     nRet = MV_CC_CreateHandle(&_handle, _pDeviceInfo);
@@ -59,7 +70,84 @@ int Hikcamera::init_device()
     return nRet;
 }
 
-void Hikcamera::loadRosServerParam() 
+int Hikcamera::deinitDevice()
+{
+    int nRet = MV_OK;
+    nRet = MV_CC_CloseDevice(_handle);
+    if (MV_OK != nRet)
+    {
+        ROS_ERROR("ClosDevice fail! nRet [0x%x]\n", nRet);
+        return nRet;
+    }
+
+    nRet = MV_CC_DestroyHandle(_handle);
+    if (MV_OK != nRet)
+    {
+        ROS_ERROR("Destroy Handle fail! nRet [0x%x]\n", nRet);
+        return nRet;
+    }
+
+    return nRet;
+}
+
+int Hikcamera::initWorkThread(WORK_THREAD_MODE work_thread_mode) {
+
+    releaseAllWorkThread();
+
+    _work_thread_mode = work_thread_mode;
+
+    if (_work_thread_mode == WORK_THREAD_MODE_NOT_SELECTED) {
+
+        return -1;
+    }
+
+    _get_frame_wt = std::make_shared<std::thread>(std::bind(&Hikcamera::GetFrameWorkThread, this));
+    if (_work_thread_mode == WORK_THREAD_MODE_ROS_PUBLISH) {
+        _ros_publish_wt = std::make_shared<std::thread>(std::bind(&Hikcamera::RosPublishWorkThread, this));
+    } else if (_work_thread_mode == WORK_THREAD_MODE_IMAGE_CALLBACK) {
+        _image_received_callback_wt = std::make_shared<std::thread>(std::bind(&Hikcamera::ImageReceivedCallBackWorkThread, this));
+    }
+
+    return 0;
+}
+
+int Hikcamera::releaseAllWorkThread() {
+    
+    _start_get_frame_wt = false;
+    _start_ros_publish_wt = false;
+    _start_image_received_callback_wt = false;
+    _exit_get_frame_wt = true;
+    _exit_ros_publish_wt = true;
+    _exit_image_received_callback_wt = true;
+    
+    if (_get_frame_wt) {
+        _get_frame_wt->join();
+        _get_frame_wt = nullptr;
+    }
+    if (_ros_publish_wt) {
+        _ros_publish_wt->join();
+        _ros_publish_wt = nullptr;
+    }
+    if (_image_received_callback_wt) {
+        _image_received_callback_wt->join();
+        _image_received_callback_wt = nullptr;
+    }
+
+    return 0;
+}
+
+int32_t Hikcamera::SetImageReceivedCb(ImageReceivedCb cb, void *data) {
+
+    if ((cb != nullptr) || (data != nullptr)) {
+        _image_received_cb = cb;
+        _client_data = data;
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+void Hikcamera::loadParamFromRosServer() 
 {
 
     /*Image Format Control*/
@@ -106,9 +194,16 @@ void Hikcamera::loadRosServerParam()
 
 }
 
+void Hikcamera::loadRosConfig() {
+
+    _nh->param("image_publish_topic", _ROS_PARAM.image_publish_topic, std::string("/hikcamera/image_"));
+    _nh->param("publish_compressed", _ROS_PARAM.publish_compressed, true);
+
+}
+
 int Hikcamera::setParamFromRosServer() {
 
-    loadRosServerParam();
+    loadParamFromRosServer();
 
     int nRet = MV_OK;
     nRet |= setImageFormat(_HIKCAMERA_PARAM.Width, _HIKCAMERA_PARAM.Height, _HIKCAMERA_PARAM.OffsetX, _HIKCAMERA_PARAM.OffsetY,
@@ -467,63 +562,286 @@ int Hikcamera::startGrabbing()
 {
     int nRet = MV_OK;
 
+    if (_work_thread_mode == WORK_THREAD_MODE_NOT_SELECTED) {
+        ROS_ERROR("_work_thread_mode == WORK_THREAD_MODE_NOT_SELECTED\n");
+    }
+
     nRet = MV_CC_StartGrabbing(_handle);
     if (MV_OK != nRet)
     {
         ROS_ERROR("Start Grabbing fail! nRet [0x%x]\n", nRet);
         return nRet;
     }
+
+    _start_get_frame_wt = true;
+    _exit_get_frame_wt = false;
+    if (_work_thread_mode == WORK_THREAD_MODE_ROS_PUBLISH) {
+        _start_ros_publish_wt = true;
+        _exit_ros_publish_wt = false;
+    } else if (_work_thread_mode == WORK_THREAD_MODE_IMAGE_CALLBACK) {
+        _start_image_received_callback_wt = true;
+        _exit_image_received_callback_wt = false;
+    } else {
+        ROS_ERROR("Work Thread is NOT started\n");
+        return -1;
+    }
+
+    return nRet;
+}
+
+int Hikcamera::stopGrabbing()
+{
+    releaseAllWorkThread();
+
+    int nRet = MV_OK;
+
+    nRet = MV_CC_StopGrabbing(_handle);
+    if (MV_OK != nRet)
+    {
+        ROS_ERROR("Start Grabbing fail! nRet [0x%x]\n", nRet);
+        return nRet;
+    }
+
+    return nRet;
+}
+
+
+void Hikcamera::GetFrameWorkThread() {
+    
+    while (!_start_get_frame_wt) {
+        /* waiting to start */
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    ROS_WARN("Start GetFrameWorkThread");
+    
+    while(!_exit_get_frame_wt) {
+
+        int nRet = MV_OK;
+        MV_FRAME_OUT stFrameOut = {0};
+        static uint64_t seq = 1;
+        static auto last_rcv_time = std::chrono::high_resolution_clock::now();
+
+        nRet = MV_CC_GetImageBuffer(_handle, &stFrameOut, (1000.f / _HIKCAMERA_PARAM.AcquisitionLineRate) * 1.5); 
+        if (nRet != MV_OK) {
+            ROS_WARN("Get Image fail! nRet [0x%x]\n", nRet);
+            continue;
+        }
+        auto rcv_time = std::chrono::high_resolution_clock::now();
+
+        auto seq_interval = std::chrono::nanoseconds(1000000000 / _HIKCAMERA_PARAM.AcquisitionLineRate);
+        seq += ((rcv_time - last_rcv_time) + seq_interval / 2) / seq_interval;
+
+        // Log retrieved frame information
+        std::string debug_msg;
+        debug_msg = "Device [" + std::to_string(_camera_index) + "] GetOneFrame,nFrameNum[" +
+                    std::to_string(stFrameOut.stFrameInfo.nFrameNum) + "], DeviceTimeStamp: [" +
+                    std::to_string(nDevTimeStampCov(stFrameOut.stFrameInfo.nDevTimeStampHigh, stFrameOut.stFrameInfo.nDevTimeStampLow)) + "], Width: [" +
+                    std::to_string(stFrameOut.stFrameInfo.nWidth) + "], Height: [" +
+                    std::to_string(stFrameOut.stFrameInfo.nHeight) + "], nFrameLen: [" +
+                    std::to_string(stFrameOut.stFrameInfo.nFrameLen)+ "]\n";
+        if (IS_SHOW_FRAME_INFO) {
+            ROS_INFO_STREAM(debug_msg.c_str());
+        }
+
+        cv::Mat cv_image = imageMvToCv(stFrameOut, _HIKCAMERA_PARAM.PixelFormat);
+        _ImageQueue.push(ImageQueuePacket(cv_image, stFrameOut.stFrameInfo, seq));
+
+        if (stFrameOut.pBufAddr != NULL) {
+            nRet = MV_CC_FreeImageBuffer(_handle, &stFrameOut);
+            if (nRet != MV_OK) {
+                ROS_ERROR("Free Image Buffer fail! nRet [0x%x]\n", nRet);
+            }
+        }
+
+    }
+    ROS_WARN("Stop GetFrameWorkThread");
+}
+
+void Hikcamera::RosPublishWorkThread() {
+
+    image_transport::ImageTransport it(*_nh);
+    image_transport::Publisher pub = it.advertise(_ROS_PARAM.image_publish_topic + std::to_string(_camera_index), 1);
+
+    while (!_start_ros_publish_wt) {
+        /* waiting to start */
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    ROS_WARN("Start RosPublishWorkThread");
+    
+    while(!_exit_ros_publish_wt) {
+
+        auto imagePacket = _ImageQueue.wait_and_pop();
+        if (imagePacket) {
+            sensor_msgs::ImagePtr msg = imageCvToRos(imagePacket->image, _HIKCAMERA_PARAM.PixelFormat);
+            pub.publish(msg);
+        }
+
+    }
+    ROS_WARN("Stop RosPublishWorkThread");
+
+}
+
+void Hikcamera::ImageReceivedCallBackWorkThread()
+{
+    while (!_start_image_received_callback_wt) {
+        /* waiting to start */
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    ROS_WARN("Start ImageReceivedCallBackWorkThread");
+    
+    while(!_exit_image_received_callback_wt) {
+
+        auto imagePacket = _ImageQueue.wait_and_pop();
+        if (imagePacket) {
+            _image_received_cb(imagePacket->image, 
+                            nDevTimeStampCov(imagePacket->stFrameInfo.nDevTimeStampHigh, imagePacket->stFrameInfo.nDevTimeStampLow),
+                            imagePacket->seq);
+        }
+
+    }
+    ROS_WARN("Stop ImageReceivedCallBackWorkThread");
 }
 
 
 
-// bool Hikcamera::init() {
 
-//     int nRet;
-//     nRet = MV_CC_Initialize();
-//     if (MV_OK != nRet)
-//     {
-//         printf("Initialize SDK fail! nRet [0x%x]\n", nRet);
-//         return nRet;
-//     }
-    
-    
-// }
+cv::Mat Hikcamera::imageMvToCv(const MV_FRAME_OUT& stFrameOut, MV_PIXEL_FORMAT mv_format) {
+    switch (mv_format) {
+        case MV_PIXEL_FORMAT_Mono8:
+            return cv::Mat(stFrameOut.stFrameInfo.nHeight, stFrameOut.stFrameInfo.nWidth, CV_8UC1, stFrameOut.pBufAddr);
+        case MV_PIXEL_FORMAT_Mono10:
+        case MV_PIXEL_FORMAT_Mono12:
+        case MV_PIXEL_FORMAT_Mono16:
+            return cv::Mat(stFrameOut.stFrameInfo.nHeight, stFrameOut.stFrameInfo.nWidth, CV_16UC1, stFrameOut.pBufAddr);
+        case MV_PIXEL_FORMAT_RGB8Packed:
+            return cv::Mat(stFrameOut.stFrameInfo.nHeight, stFrameOut.stFrameInfo.nWidth, CV_8UC3, stFrameOut.pBufAddr);
+        case MV_PIXEL_FORMAT_YUV422_8:
+        case MV_PIXEL_FORMAT_YUV422_8_UYVY:
+            return cv::Mat(stFrameOut.stFrameInfo.nHeight, stFrameOut.stFrameInfo.nWidth, CV_8UC2, stFrameOut.pBufAddr);
+        case MV_PIXEL_FORMAT_BayerGR8:
+        case MV_PIXEL_FORMAT_BayerRG8:
+        case MV_PIXEL_FORMAT_BayerGB8:
+        case MV_PIXEL_FORMAT_BayerBG8:
+            return cv::Mat(stFrameOut.stFrameInfo.nHeight, stFrameOut.stFrameInfo.nWidth, CV_8UC1, stFrameOut.pBufAddr);
+        default:
+            throw std::runtime_error("Unsupported pixel format");
+    }
+}
+
+sensor_msgs::ImagePtr Hikcamera::imageCvToRos(const cv::Mat& cv_image, MV_PIXEL_FORMAT mv_format) {
+
+    cv::Mat output;
+    switch (mv_format) {
+        case MV_PIXEL_FORMAT_Mono8:
+            output = cv_image;  // 直接使用输入的单通道 8 位灰度图像
+            break;
+        case MV_PIXEL_FORMAT_Mono10:
+        case MV_PIXEL_FORMAT_Mono12:
+        case MV_PIXEL_FORMAT_Mono16:
+            {
+                // 计算最大值
+                double maxVal = (mv_format == MV_PIXEL_FORMAT_Mono10) ? 1023.0 :
+                                (mv_format == MV_PIXEL_FORMAT_Mono12) ? 4095.0 : 65535.0;
+                cv_image.convertTo(output, CV_8U, 255.0 / maxVal);  // 缩放到 8 位
+            }
+            break;  
+        case MV_PIXEL_FORMAT_RGB8Packed:
+            output = cv_image;
+            break;
+        case MV_PIXEL_FORMAT_YUV422_8:
+        case MV_PIXEL_FORMAT_YUV422_8_UYVY:
+            cv::cvtColor(cv_image, output, cv::COLOR_YUV2RGB_UYVY);
+            break;
+        case MV_PIXEL_FORMAT_BayerGR8:
+            cv::cvtColor(cv_image, output, cv::COLOR_BayerGR2RGB);
+            break;
+        case MV_PIXEL_FORMAT_BayerRG8:
+            cv::cvtColor(cv_image, output, cv::COLOR_BayerRG2RGB);
+            break;
+        case MV_PIXEL_FORMAT_BayerGB8:
+            cv::cvtColor(cv_image, output, cv::COLOR_BayerGB2RGB);
+            break;
+        case MV_PIXEL_FORMAT_BayerBG8:
+            cv::cvtColor(cv_image, output, cv::COLOR_BayerBG2RGB);
+            break;
+        case MV_PIXEL_FORMAT_BayerGB10:
+        case MV_PIXEL_FORMAT_BayerGB12:
+        case MV_PIXEL_FORMAT_BayerGB12Packed:
+            {
+                cv::Mat scaled;
+                cv_image.convertTo(scaled, CV_8U, 1.0 / 16.0);  
+                cv::cvtColor(scaled, output, cv::COLOR_BayerGB2RGB);
+            }
+            break;
+        default:
+            throw std::runtime_error("Unsupported pixel format for RGB conversion");
+    }
+
+    switch (mv_format) {
+        case MV_PIXEL_FORMAT_Mono8:
+        case MV_PIXEL_FORMAT_Mono10:
+        case MV_PIXEL_FORMAT_Mono12:
+        case MV_PIXEL_FORMAT_Mono16:
+            return cv_bridge::CvImage(std_msgs::Header(), "mono8", output).toImageMsg(); 
+        case MV_PIXEL_FORMAT_RGB8Packed:
+        case MV_PIXEL_FORMAT_YUV422_8:
+        case MV_PIXEL_FORMAT_YUV422_8_UYVY:
+        case MV_PIXEL_FORMAT_BayerGR8:
+        case MV_PIXEL_FORMAT_BayerRG8:
+        case MV_PIXEL_FORMAT_BayerGB8:
+        case MV_PIXEL_FORMAT_BayerBG8:
+        case MV_PIXEL_FORMAT_BayerGB10:
+        case MV_PIXEL_FORMAT_BayerGB12:
+        case MV_PIXEL_FORMAT_BayerGB12Packed:
+            return cv_bridge::CvImage(std_msgs::Header(), "rgb8", output).toImageMsg(); 
+        default:
+            throw std::runtime_error("Unsupported pixel format for RGB conversion");
+    }
+}
+
+
+// nDevTimeStampHigh + nDevTimeStampLow to ns timestamp
+uint64_t Hikcamera::nDevTimeStampCov(unsigned int nDevTimeStampHigh, unsigned int nDevTimeStampLow) {
+    return ((uint64_t)nDevTimeStampHigh << 32) | nDevTimeStampLow;
+}
+
+// ns timestamp to date time
+std::string Hikcamera::timestampToDateTime(uint64_t timestamp_ns) {
+    // 将纳秒转换为秒
+    auto seconds = std::chrono::seconds(timestamp_ns / 1000000000);
+    // 获取剩余的纳秒
+    auto nanoseconds = std::chrono::nanoseconds(timestamp_ns % 1000000000);
+
+    // 构造时间点
+    std::chrono::time_point<std::chrono::system_clock> tp(seconds + nanoseconds);
+
+    // 转化为time_t以使用ctime获取可读时间
+    std::time_t readable_time = std::chrono::system_clock::to_time_t(tp);
+
+    // 使用gmtime或localtime转换为tm结构体，然后格式化输出
+    std::tm* timeinfo = std::localtime(&readable_time);
+    char buffer[80];
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
+
+    return std::string(buffer);
+}
+
+// ns timestamp to sec，format xxx.xxx
+std::string Hikcamera::timestampToSeconds(uint64_t timestamp_ns) {
+    // 计算整数秒
+    uint64_t seconds = timestamp_ns / 1000000000;
+    // 计算剩余的纳秒部分
+    uint64_t remaining_ns = timestamp_ns % 1000000000;
+
+    // 使用stringstream来构建完整格式的字符串
+    std::stringstream ss;
+    ss << seconds << "." << remaining_ns; // 直接拼接整数秒和剩余纳秒
+    return ss.str();
+}
 
 
 
-// bool Hikcamera::startCapture() {
-//     isCapturing = true;
-//     // Start capture logic
-//     std::cout << "Capture started." << std::endl;
-//     return true;
-// }
-
-// bool Hikcamera::stopCapture() {
-//     isCapturing = false;
-//     // Stop capture logic
-//     std::cout << "Capture stopped." << std::endl;
-//     return true;
-// }
-
-// std::vector<uint8_t> Hikcamera::getFrame() {
-//     std::vector<uint8_t> frame;
-//     if (isCapturing) {
-//         // Simulate a frame capture
-//         frame.resize(width * height * 3); // Assuming a simple RGB format
-//         std::fill(frame.begin(), frame.end(), 255); // Dummy data for demonstration
-//     }
-//     return frame;
-// }
-
-// bool Hikcamera::setExposure(double exposureLevel) {
-//     exposure = exposureLevel;
-//     // Set exposure logic
-//     std::cout << "Exposure set to: " << exposure << std::endl;
-//     return true;
-// }
-
-bool Hikcamera::_printDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
+bool Hikcamera::printDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
 {
     if (NULL == pstMVDevInfo)
     {
@@ -537,7 +855,7 @@ bool Hikcamera::_printDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
         int nIp3 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8);
         int nIp4 = (pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff);
 
-        // ch:��ӡ��ǰ���ip���û��Զ������� | en:print current ip and user defined name
+        // print current ip and user defined name
         printf("CurrentIp: %d.%d.%d.%d\n" , nIp1, nIp2, nIp3, nIp4);
         printf("UserDefinedName: %s\n\n" , pstMVDevInfo->SpecialInfo.stGigEInfo.chUserDefinedName);
     }

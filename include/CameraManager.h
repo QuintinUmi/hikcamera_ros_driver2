@@ -14,15 +14,14 @@
 #include <sensor_msgs/Image.h>
 #include <image_transport/image_transport.h>
 
-#include "MvCameraControl.h"
-
 
 namespace hikcamera_ros_driver2
 {
-
-    class HikManager
+    class CameraManager
     {
         public:
+            CameraManager();
+            ~CameraManager();
 
             
 
@@ -53,7 +52,6 @@ namespace hikcamera_ros_driver2
         private:
 
             ros::NodeHandle nh;
-            MV_CC_DEVICE_INFO_LIST stDeviceList;
 
             
 
@@ -63,8 +61,9 @@ namespace hikcamera_ros_driver2
             int nRet;
 
     };
-
 }
+
+
 
 
 #endif 
