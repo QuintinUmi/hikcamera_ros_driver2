@@ -1,12 +1,4 @@
+image_publish_topic: "/hikcamera/image_"
+publish_compressed: True
 
-ros_image_publish_rate: 45
 
-image_publish_topic: "/hikcamera/img_stream"
-
-image_file_save_path: "/home/quintinumi/project/camera_calibration_img/"
-
-camera_instrinsics_path_yaml: "/home/quintinumi/project/ws_camera_calibration/src/camera_calibration/src/camera_calibration_pkg/config/calibration_param.yaml"
-
-GPRMC_serial_name: "/dev/ttyACM0"
-
-trigger_rate: 10

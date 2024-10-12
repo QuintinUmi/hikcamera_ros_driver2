@@ -11,7 +11,7 @@ AcquisitionLineRate: 20
 AcquisitionLineRateEnable: 1
 
 TriggerMode: 1
-TriggerSource: -1
+TriggerSource: -1       # -1: Action1
 TriggerActivation: 0
 
 ExposureTime: 15000.0
@@ -23,7 +23,7 @@ AutoExposureTimeUpperLimit: 45000
 Gain: 25.0
 GainAuto: 2
 AutoGainLowerLimit: 25.0
-AutoGainupperLimit: 0.0
+AutoGainUpperLimit: 0.0
 
 Brightness: 100
 
