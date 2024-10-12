@@ -25,25 +25,53 @@ namespace hikcamera_ros_driver2{
         Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, ros::NodeHandle* nh, bool load_ros_param);
         ~Hikcamera();
 
-        void load_ros_param();
+        int init_device();
 
-        bool init();
-        bool startCapture();
+        void loadRosServerParam();
+        int setParamFromRosServer();
+        
+        int setImageFormat(int Width, int Height, int OffsetX, int OffsetY, 
+                            MV_PIXEL_FORMAT PixelFormat, MV_IMAGE_COMPRESSION_MODE ImageCompressionMode);
+
+        int setAcquisitionRate(MV_ACQUISITION_LINE_RATE_ENABLE AcquisitionLineRateEnable,
+                                int AcquisitionLineRate);
+        int setTrigger(MV_TRIGGER_MODE TriggerMode, MV_TRIGGER_SOURCE TriggerSource, MV_TRIGGER_ACTIVATION TriggerActivation);
+        int setExplosure(MV_EXPOSURE_AUTO ExposureAuto, float ExposureTime, int AutoExposureTimeLowerLimit, int AutoExposureTimeUpperLimit);
+        
+        int setGain(MV_GAIN_AUTO GainAuto, float Gain, float AutoGainLowerLimit, float AutoGainUpperLimit);
+        int setBrightness(int Brightness);
+        
+        int setLineIO(MV_LINE_SELECTOR LineSelector, MV_LINE_MODE LineMode, 
+                        int LineDebouncerTime,
+                        MV_STROBE_ENABLE StrobeEnable, MV_LINE_SOURCE LineSource, 
+                        int StrobeLineDuration, int StrobeLineDelay, int StrobeLinePreDelay);
+        int setLineIOBatch(std::vector<MV_LINE_SELECTOR> LineSelector, std::vector<MV_LINE_MODE> LineMode,
+                            std::vector<int> LineDebouncerTime,
+                            std::vector<MV_STROBE_ENABLE> StrobeEnable, std::vector<MV_LINE_SOURCE> LineSource,
+                            std::vector<int> StrobeLineDuration, std::vector<int> StrobeLineDelay, std::vector<int> StrobeLinePreDelay);
+
+        int setTransportLayerControl(MV_GEV_IEEE_1588 GevIEEE1588);
+        
+
+        int startGrabbing();
         bool stopCapture();
         std::vector<uint8_t> getFrame();
         // bool setExposure(double exposureLevel) override;
 
     private:
 
-        bool _PrintDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo);
+        bool _printDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo);
+
+        
 
     private:
 
-        MV_CC_DEVICE_INFO* _deviceInfo;
+        MV_CC_DEVICE_INFO* _pDeviceInfo;
         ros::NodeHandle* _nh;
         uint8_t _camera_index;
 
-        void* handle;
+        void* _handle;
+        int _nPacketSize;
 
         struct {
 
@@ -52,42 +80,42 @@ namespace hikcamera_ros_driver2{
                 int Height;
                 int OffsetX;
                 int OffsetY;
-                int PixelFormat;
-                int ImageCompressionMode;
+                MV_PIXEL_FORMAT PixelFormat;
+                MV_IMAGE_COMPRESSION_MODE ImageCompressionMode;
 
                 /*Acquisition Control*/
                 int AcquisitionLineRate;
-                bool AcquisitionLineRateEnable;
+                MV_ACQUISITION_LINE_RATE_ENABLE AcquisitionLineRateEnable;
 
-                int TriggerMode;
-                int TriggerSource;
-                int TriggerActivation;
+                MV_TRIGGER_MODE TriggerMode;
+                MV_TRIGGER_SOURCE TriggerSource;
+                MV_TRIGGER_ACTIVATION TriggerActivation;
 
                 float ExposureTime;
-                int ExposureAuto;
+                MV_EXPOSURE_AUTO ExposureAuto;
                 int AutoExposureTimeLowerLimit;
-                int AutoExposureTimeupperLimit;
+                int AutoExposureTimeUpperLimit;
 
                 /*Analog Control*/
                 float Gain;
-                int GainAuto;
+                MV_GAIN_AUTO GainAuto;
                 float AutoGainLowerLimit;
-                float AutoGainupperLimit;
+                float AutoGainUpperLimit;
 
                 int Brightness;
 
                 /*Digital IO Control*/
-                std::vector<int> LineSelector;
-                std::vector<int> LineMode;
+                std::vector<MV_LINE_SELECTOR> LineSelector;
+                std::vector<MV_LINE_MODE> LineMode;
                 std::vector<int> LineDebouncerTime;
-                std::vector<bool> StrobeEnable;
-                std::vector<int> LineSource;
+                std::vector<MV_STROBE_ENABLE> StrobeEnable;
+                std::vector<MV_LINE_SOURCE> LineSource;
                 std::vector<int> StrobeLineDuration;
                 std::vector<int> StrobeLineDelay;
                 std::vector<int> StrobeLinePreDelay;
 
                 /*Transport Layer Control*/
-                bool GevIEEE1588;
+                MV_GEV_IEEE_1588 GevIEEE1588;
 
             } _HIKCAMERA_PARAM;
         
