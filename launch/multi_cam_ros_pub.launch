@@ -1,0 +1,8 @@
+<launch>
+
+    <rosparam file="$(find hikcamera_ros_driver2)/config/hikcamera-param.yaml" command="load"/>
+    <rosparam file="$(find hikcamera_ros_driver2)/config/ros-node-config.yaml" command="load"/>
+
+    <node pkg="hikcamera_ros_driver2" type="multi_cam_ros_pub" name="multi_cam_ros_pub" output="screen"/>
+    <!-- <node pkg="hikcamera_opr" type="msg_hikcamera_info" name="msg_hikcamera_info" output="screen"/> -->
+</launch>
