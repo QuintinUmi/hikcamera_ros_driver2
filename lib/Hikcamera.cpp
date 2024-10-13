@@ -3,15 +3,13 @@
 
 using namespace hikcamera_ros_driver2;
 
-#define IS_SHOW_FRAME_INFO false
-
-Hikcamera::Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index) 
+Hikcamera::Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index) : _pDeviceInfo(pDeviceInfo), _camera_index(camera_index)
 {
 
 }
 
 Hikcamera::Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index, ros::NodeHandle* nh) : 
-                    _pDeviceInfo(pDeviceInfo), _nh(nh), _camera_index(camera_index), _work_thread_mode(WORK_THREAD_MODE_NOT_SELECTED)
+                    _pDeviceInfo(pDeviceInfo), _camera_index(camera_index), _nh(nh), _work_thread_mode(WORK_THREAD_MODE_NOT_SELECTED)
 {
     
 }
@@ -29,21 +27,21 @@ int Hikcamera::init(bool set_param_from_ros) {
 
     nRet = initDevice();
     if (nRet != MV_OK) {
-        ROS_WARN("Incomplete initialization!");
+        ROS_WARN("Device [%d]: Incomplete initialization!", _camera_index);
         nRet_t |= nRet;
     }
 
     loadRosConfig();
-
+    
     if (set_param_from_ros) {
         nRet = setParamFromRosServer();
         if (nRet != MV_OK) {
-            ROS_WARN("Incomplete setParamFromRosServer!");
+            ROS_WARN("Device [%d]: Incomplete setParamFromRosServer!", _camera_index);
             nRet_t |= nRet;
         }
         nRet = initWorkThread(WORK_THREAD_MODE_ROS_PUBLISH);
         if (nRet != MV_OK) {
-            ROS_WARN("Incomplete initWorkThread!");
+            ROS_WARN("Device [%d]: Incomplete initWorkThread!", _camera_index);
             nRet_t |= nRet;
         }
     }
@@ -58,14 +56,14 @@ int Hikcamera::initDevice()
     nRet = MV_CC_CreateHandle(&_handle, _pDeviceInfo);
     if (MV_OK != nRet)
     {
-        ROS_ERROR("Create Handle fail! nRet [0x%x]\n", nRet);
+        ROS_ERROR("Device [%d]: Create Handle fail! nRet [0x%x]\n", _camera_index, nRet);
         return nRet;
     }
 
     nRet = MV_CC_OpenDevice(_handle);
     if (MV_OK != nRet)
     {
-        ROS_ERROR("Open Device fail! nRet [0x%x]\n", nRet);
+        ROS_ERROR("Device [%d]: Open Device fail! nRet [0x%x]\n", _camera_index, nRet);
         return nRet;
     }
 
@@ -77,12 +75,12 @@ int Hikcamera::initDevice()
             nRet = MV_CC_SetIntValue(_handle,"GevSCPSPacketSize",_nPacketSize);
             if(nRet != MV_OK)
             {
-                ROS_WARN("Warning: Set Packet Size fail nRet [0x%x]!", nRet);
+                ROS_WARN("Device [%d]: Warning: Set Packet Size fail nRet [0x%x]!", _camera_index, nRet);
             }
         }
         else
         {
-            ROS_WARN("Warning: Get Packet Size fail nRet [0x%x]!", _nPacketSize);
+            ROS_WARN("Device [%d]: Warning: Get Packet Size fail nRet [0x%x]!", _camera_index, _nPacketSize);
         }
     }
 
@@ -95,14 +93,14 @@ int Hikcamera::deinitDevice()
     nRet = MV_CC_CloseDevice(_handle);
     if (MV_OK != nRet)
     {
-        ROS_ERROR("ClosDevice fail! nRet [0x%x]\n", nRet);
+        ROS_ERROR("Device [%d]: Close Device fail! nRet [0x%x]\n", _camera_index, nRet);
         return nRet;
     }
 
     nRet = MV_CC_DestroyHandle(_handle);
     if (MV_OK != nRet)
     {
-        ROS_ERROR("Destroy Handle fail! nRet [0x%x]\n", nRet);
+        ROS_ERROR("Device [%d]: Destroy Handle fail! nRet [0x%x]\n", _camera_index, nRet);
         return nRet;
     }
 
@@ -176,7 +174,7 @@ void Hikcamera::loadParamFromRosServer()
     _nh->param("Height", _HIKCAMERA_PARAM.Height, 2048);
     _nh->param("OffsetX", _HIKCAMERA_PARAM.OffsetX, 0);
     _nh->param("OffsetY", _HIKCAMERA_PARAM.OffsetY, 0);
-    _nh->param("PixelFormat", PixelFormat, (int)HIK_PIXEL_FORMAT_BayerBG8);
+    _nh->param("PixelFormat", PixelFormat, (int)HIK_PIXEL_FORMAT_BayerRG8);
     _nh->param("ImageCompressionMode", ImageCompressionMode, (int)HIK_IMAGE_COMPRESSION_MODE_HB);
 
     _HIKCAMERA_PARAM.PixelFormat = static_cast<HIK_PIXEL_FORMAT>(PixelFormat);
@@ -208,8 +206,8 @@ void Hikcamera::loadParamFromRosServer()
 
     _nh->param("Gain", _HIKCAMERA_PARAM.Gain, 25.f);
     _nh->param("GainAuto", GainAuto, (int)HIK_GAIN_AUTO_CONTINUOUS);
-    _nh->param("AutoGainLowerLimit", _HIKCAMERA_PARAM.AutoGainLowerLimit, 25.f);
-    _nh->param("AutoGainUpperLimit", _HIKCAMERA_PARAM.AutoGainUpperLimit, 0.f);
+    _nh->param("AutoGainLowerLimit", _HIKCAMERA_PARAM.AutoGainLowerLimit, 0.f);
+    _nh->param("AutoGainUpperLimit", _HIKCAMERA_PARAM.AutoGainUpperLimit, 23.9812f);
 
     _nh->param("Brightness", _HIKCAMERA_PARAM.Brightness, 100);
 
@@ -235,6 +233,11 @@ void Hikcamera::loadParamFromRosServer()
         _HIKCAMERA_PARAM.StrobeEnable.push_back(static_cast<HIK_STROBE_ENABLE>(num));
     for (int num : LineSource) 
         _HIKCAMERA_PARAM.LineSource.push_back(static_cast<HIK_LINE_SOURCE>(num));
+
+    /*Action Control*/
+    _nh->param("ActionDeviceKey", _HIKCAMERA_PARAM.ActionDeviceKey, 0x00000001);
+    _nh->param("ActionGroupMask", _HIKCAMERA_PARAM.ActionGroupMask, 0x00000001);
+    _nh->param("ActionGroupKey", _HIKCAMERA_PARAM.ActionGroupKey, 0x00000001);
 
     /*Transport Layer Control*/
     int GevIEEE1588;
@@ -283,44 +286,38 @@ int Hikcamera::setImageFormat(int Width, int Height, int OffsetX, int OffsetY,
     int nRet_t = MV_OK;
 
     nRet = MV_CC_SetIntValue(_handle, "Width", Width);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set Width fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set Width fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
     nRet = MV_CC_SetIntValue(_handle, "Height", Height);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set Height fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set Height fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
     nRet = MV_CC_SetIntValue(_handle, "OffsetX", OffsetX);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set OffsetX fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set OffsetX fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
     nRet = MV_CC_SetIntValue(_handle, "OffsetY", OffsetY);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set OffsetY fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set OffsetY fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
     nRet = MV_CC_SetEnumValue(_handle, "PixelFormat", PixelFormat);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set PixelFormat Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set PixelFormat fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
     nRet = MV_CC_SetEnumValue(_handle, "ImageCompressionMode", ImageCompressionMode);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set ImageCompressionMode Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set ImageCompressionMode fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
@@ -332,18 +329,16 @@ int Hikcamera::setAcquisitionRate(HIK_ACQUISITION_LINE_RATE_ENABLE AcquisitionLi
     int nRet = MV_OK;
     int nRet_t = MV_OK;
 
-    nRet = MV_CC_SetBoolValue(_handle, "AcquisitionLineRateEnable", AcquisitionLineRateEnable);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set AcquisitionLineRateEnable Mode fail! nRet [0x%x]\n", nRet);
+    nRet = MV_CC_SetBoolValue(_handle, "AcquisitionFrameRateEnable", AcquisitionLineRateEnable);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set AcquisitionFrameRateEnable fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
     if (AcquisitionLineRateEnable == HIK_ACQUISITION_LINE_RATE_ENABLE_ON) {
-        nRet = MV_CC_SetIntValue(_handle, "AcquisitionLineRate", AcquisitionLineRate);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set AcquisitionLineRate Mode fail! nRet [0x%x]\n", nRet);
+        nRet = MV_CC_SetFloatValue(_handle, "AcquisitionFrameRate", AcquisitionLineRate);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set AcquisitionFrameRate fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
     }
@@ -357,55 +352,48 @@ int Hikcamera::setTrigger(HIK_TRIGGER_MODE TriggerMode, HIK_TRIGGER_SOURCE Trigg
     int nRet_t = MV_OK;
 
     nRet = MV_CC_SetEnumValue(_handle, "TriggerMode", TriggerMode);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set TriggerMode Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set TriggerMode fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
     if (TriggerSource == HIK_TRIGGER_SOURCE_Action1_SPECIAL) {
 
         nRet = MV_CC_SetEnumValueByString(_handle, "TriggerSource", "Action1");
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set Trigger Source fail! nRet [0x%x]\n", nRet);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set Trigger Source fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
 
-        nRet = MV_CC_SetIntValue(_handle, "ActionDeviceKey", ActionDeviceKey);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set Action Device Key fail! nRet [0x%x]\n", nRet);
+        nRet = MV_CC_SetIntValue(_handle, "ActionDeviceKey", _HIKCAMERA_PARAM.ActionDeviceKey);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set Action Device Key fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
 
-        nRet = MV_CC_SetIntValue(_handle, "ActionGroupKey", ActionGroupKey);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set Action Group Key fail! nRet [0x%x]\n", nRet);
+        nRet = MV_CC_SetIntValue(_handle, "ActionGroupKey", _HIKCAMERA_PARAM.ActionGroupKey);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set Action Group Key fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
 
-        nRet = MV_CC_SetIntValue(_handle, "ActionGroupMask", ActionGroupMask);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set Action Group Mask fail! nRet [0x%x]\n", nRet);
+        nRet = MV_CC_SetIntValue(_handle, "ActionGroupMask", _HIKCAMERA_PARAM.ActionGroupMask);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set Action Group Mask fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
 
     } else {
 
         nRet = MV_CC_SetEnumValue(_handle, "TriggerSource", TriggerSource);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set TriggerSource Mode fail! nRet [0x%x]\n", nRet);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set TriggerSource fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
         
         nRet = MV_CC_SetEnumValue(_handle, "TriggerActivation", TriggerActivation);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set TriggerActivation Mode fail! nRet [0x%x]\n", nRet);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set TriggerActivation fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
     }
@@ -420,30 +408,28 @@ int Hikcamera::setExplosure(HIK_EXPOSURE_AUTO ExposureAuto, float ExposureTime,
     int nRet_t = MV_OK;
 
     nRet = MV_CC_SetEnumValue(_handle, "ExposureAuto", ExposureAuto);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set ExposureAuto Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set ExposureAuto fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
-    nRet = MV_CC_SetFloatValue(_handle, "ExposureTime", ExposureTime);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set ExposureTime Mode fail! nRet [0x%x]\n", nRet);
-        nRet_t |= nRet;
+    if (ExposureAuto != HIK_EXPOSURE_AUTO_CONTINUOUS) {
+        nRet = MV_CC_SetFloatValue(_handle, "ExposureTime", ExposureTime);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set ExposureTime fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
     }
 
     nRet = MV_CC_SetIntValue(_handle, "AutoExposureTimeLowerLimit", AutoExposureTimeLowerLimit);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set AutoExposureTimeLowerLimit Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set AutoExposureTimeLowerLimit fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
     nRet = MV_CC_SetIntValue(_handle, "AutoExposureTimeUpperLimit", AutoExposureTimeUpperLimit);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set AutoExposureTimeUpperLimit Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set AutoExposureTimeUpperLimit fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
@@ -456,30 +442,28 @@ int Hikcamera::setGain(HIK_GAIN_AUTO GainAuto, float Gain, float AutoGainLowerLi
     int nRet_t = MV_OK;
 
     nRet = MV_CC_SetEnumValue(_handle, "GainAuto", GainAuto);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set GainAuto Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set GainAuto fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
-    nRet = MV_CC_SetFloatValue(_handle, "Gain", Gain);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set Gain Mode fail! nRet [0x%x]\n", nRet);
-        nRet_t |= nRet;
+    if (GainAuto != HIK_GAIN_AUTO_CONTINUOUS) {
+        nRet = MV_CC_SetFloatValue(_handle, "Gain", Gain);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set Gain fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
     }
 
     nRet = MV_CC_SetFloatValue(_handle, "AutoGainLowerLimit", AutoGainLowerLimit);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set AutoGainLowerLimit Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set AutoGainLowerLimit fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
     nRet = MV_CC_SetFloatValue(_handle, "AutoGainUpperLimit", AutoGainUpperLimit);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set AutoGainUpperLimit Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set AutoGainUpperLimit fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
@@ -491,9 +475,8 @@ int Hikcamera::setBrightness(int Brightness)
     int nRet = MV_OK;
 
     nRet = MV_CC_SetIntValue(_handle, "Brightness", Brightness);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set Brightness Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set Brightness fail! nRet [0x%x]\n", _camera_index, nRet);
     }
 
     return nRet;
@@ -508,62 +491,56 @@ int Hikcamera::setLineIO(HIK_LINE_SELECTOR LineSelector, HIK_LINE_MODE LineMode,
     int nRet_t = MV_OK;
 
     nRet = MV_CC_SetEnumValue(_handle, "LineSelector", LineSelector);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set LineSelector Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set LineSelector fail! nRet [0x%x]\n", _camera_index, nRet);
         nRet_t |= nRet;
     }
 
-    nRet = MV_CC_SetEnumValue(_handle, "LineMode", LineMode);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set LineMode Mode fail! nRet [0x%x]\n", nRet);
-        nRet_t |= nRet;
+    if (LineSelector != HIK_LINE_SELECTOR_Line0) {
+        nRet = MV_CC_SetEnumValue(_handle, "LineMode", LineMode);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set LineMode fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
     }
 
     if (LineMode == HIK_LINE_MODE_Input) {
 
         nRet = MV_CC_SetIntValue(_handle, "LineDebouncerTime", LineDebouncerTime);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set LineDebouncerTime Mode fail! nRet [0x%x]\n", nRet);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set LineDebouncerTime fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
 
     } else if (LineMode == HIK_LINE_MODE_Strobe) {
 
         nRet = MV_CC_SetEnumValue(_handle, "LineSource", LineSource);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set LineSource Mode fail! nRet [0x%x]\n", nRet);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set LineSource fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
 
         nRet = MV_CC_SetIntValue(_handle, "StrobeLineDuration", StrobeLineDuration);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set StrobeLineDuration Mode fail! nRet [0x%x]\n", nRet);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set StrobeLineDuration fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
 
         nRet = MV_CC_SetIntValue(_handle, "StrobeLineDelay", StrobeLineDelay);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set StrobeLineDelay Mode fail! nRet [0x%x]\n", nRet);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set StrobeLineDelay fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
 
         nRet = MV_CC_SetIntValue(_handle, "StrobeLinePreDelay", StrobeLinePreDelay);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set StrobeLinePreDelay Mode fail! nRet [0x%x]\n", nRet);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set StrobeLinePreDelay fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
 
-        nRet = MV_CC_SetEnumValue(_handle, "StrobeEnable", StrobeEnable);
-        if (MV_OK != nRet)
-        {
-            ROS_WARN("Set StrobeEnable Mode fail! nRet [0x%x]\n", nRet);
+        nRet = MV_CC_SetBoolValue(_handle, "StrobeEnable", StrobeEnable);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set StrobeEnable fail! nRet [0x%x]\n", _camera_index, nRet);
             nRet_t |= nRet;
         }
     }
@@ -586,7 +563,7 @@ int Hikcamera::setLineIOBatch(std::vector<HIK_LINE_SELECTOR> LineSelector, std::
                             StrobeLineDuration[i], StrobeLineDelay[i], StrobeLinePreDelay[i]);
 
         if (nRet != MV_OK) {
-            ROS_WARN("Incomplete Line [%d] Settings!\n", LineSelector[i]);
+            ROS_WARN("Device [%d]: Incomplete Line [%d] Settings!\n", _camera_index, LineSelector[i]);
             nRet_t |= nRet;
         }
     }
@@ -599,9 +576,8 @@ int Hikcamera::setTransportLayerControl(HIK_GEV_IEEE_1588 GevIEEE1588)
     int nRet = MV_OK;
 
     MV_CC_SetBoolValue(_handle, "GevIEEE1588", GevIEEE1588);
-    if (MV_OK != nRet)
-    {
-        ROS_WARN("Set GevIEEE1588 Mode fail! nRet [0x%x]\n", nRet);
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Set GevIEEE1588 fail! nRet [0x%x]\n", _camera_index, nRet);
     }
 
     return nRet;
@@ -613,13 +589,13 @@ int Hikcamera::startGrabbing()
     int nRet = MV_OK;
 
     if (_work_thread_mode == WORK_THREAD_MODE_NOT_SELECTED) {
-        ROS_ERROR("_work_thread_mode == WORK_THREAD_MODE_NOT_SELECTED\n");
+        ROS_ERROR("Device [%d]: _work_thread_mode == WORK_THREAD_MODE_NOT_SELECTED\n", _camera_index);
     }
 
     nRet = MV_CC_StartGrabbing(_handle);
     if (MV_OK != nRet)
     {
-        ROS_ERROR("Start Grabbing fail! nRet [0x%x]\n", nRet);
+        ROS_ERROR("Device [%d]: Start Grabbing fail! nRet [0x%x]\n", _camera_index, nRet);
         return nRet;
     }
 
@@ -632,7 +608,7 @@ int Hikcamera::startGrabbing()
         _start_image_received_callback_wt = true;
         _exit_image_received_callback_wt = false;
     } else {
-        ROS_ERROR("Work Thread is NOT started\n");
+        ROS_ERROR("Device [%d]: Work Thread is NOT started\n", _camera_index);
         return -1;
     }
 
@@ -648,7 +624,7 @@ int Hikcamera::stopGrabbing()
     nRet = MV_CC_StopGrabbing(_handle);
     if (MV_OK != nRet)
     {
-        ROS_ERROR("Start Grabbing fail! nRet [0x%x]\n", nRet);
+        ROS_ERROR("Device [%d]: Start Grabbing fail! nRet [0x%x]\n", _camera_index, nRet);
         return nRet;
     }
 
@@ -658,22 +634,38 @@ int Hikcamera::stopGrabbing()
 
 void Hikcamera::GetFrameWorkThread() {
     
+    int nRet = MV_OK;
+
+    unsigned char * pDstBuf = NULL;
+    MV_FRAME_OUT stFrameDecBuf;
+    MVCC_INTVALUE stParam;
+    memset(&stParam, 0, sizeof(MVCC_INTVALUE));
+    nRet = MV_CC_GetIntValue(_handle, "PayloadSize", &stParam);
+    if (MV_OK != nRet)
+    {
+        printf("Get PayloadSize fail! nRet [0x%x]\n", nRet);
+        return;
+    }
+
+    ROS_WARN("Device [%d]: Init GetFrameWorkThread", _camera_index);
     while (!_start_get_frame_wt) {
         /* waiting to start */
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    ROS_WARN("Start GetFrameWorkThread");
+    ROS_WARN("Device [%d]: Start GetFrameWorkThread", _camera_index);
     
     while(!_exit_get_frame_wt) {
 
         int nRet = MV_OK;
-        MV_FRAME_OUT stFrameOut = {0};
+        static MV_FRAME_OUT stFrameOut = {0};
         static uint64_t seq = 1;
         static auto last_rcv_time = std::chrono::high_resolution_clock::now();
 
-        nRet = MV_CC_GetImageBuffer(_handle, &stFrameOut, (1000.f / _HIKCAMERA_PARAM.AcquisitionLineRate) * 1.5); 
+        // nRet = MV_CC_GetImageBuffer(_handle, &stFrameOut, (1000.f / _HIKCAMERA_PARAM.AcquisitionLineRate) * 1.5); 
+        nRet = MV_CC_GetImageBuffer(_handle, &stFrameOut, 1000); 
         if (nRet != MV_OK) {
-            ROS_WARN("Get Image fail! nRet [0x%x]\n", nRet);
+            ROS_ERROR("Device [%d]: Get Image fail! nRet [0x%x]\n", _camera_index, nRet);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
         }
         auto rcv_time = std::chrono::high_resolution_clock::now();
@@ -693,18 +685,61 @@ void Hikcamera::GetFrameWorkThread() {
             ROS_INFO_STREAM(debug_msg.c_str());
         }
 
-        cv::Mat cv_image = imageMvToCv(stFrameOut, _HIKCAMERA_PARAM.PixelFormat);
-        _ImageQueue.push(ImageQueuePacket(cv_image, stFrameOut.stFrameInfo, seq));
+        if (_HIKCAMERA_PARAM.ImageCompressionMode == HIK_IMAGE_COMPRESSION_MODE_HB) {
+            MV_CC_HB_DECODE_PARAM stDecodeParam = {0};
+            // Lossless compression decoding
+            stDecodeParam.pSrcBuf = stFrameOut.pBufAddr;
+            stDecodeParam.nSrcLen = stFrameOut.stFrameInfo.nFrameLen;
+            if (pDstBuf == NULL)
+            {
+                pDstBuf = (unsigned char *)malloc(sizeof(unsigned char) * (stParam.nCurValue));
+                if (NULL == pDstBuf)
+                {
+                    ROS_ERROR("malloc pDstData fail !\n");
+                    nRet = MV_E_RESOURCE;
+                    break;
+                }
+            }
+            stDecodeParam.pDstBuf = pDstBuf;
+            stDecodeParam.nDstBufSize = stParam.nCurValue;
+            nRet = MV_CC_HB_Decode(_handle, &stDecodeParam);
+            if (nRet != MV_OK) {
+                ROS_ERROR("Device [%d]: In Frame [%d] | Seq [%ld] | TimeStamp [%ld], MV_CC_HB_Decode fail! nRet [0x%x]\n", _camera_index, 
+                            stFrameOut.stFrameInfo.nFrameNum, seq, nDevTimeStampCov(stFrameOut.stFrameInfo.nDevTimeStampHigh, stFrameOut.stFrameInfo.nDevTimeStampLow),
+                            nRet);
+
+                if (stFrameOut.pBufAddr != NULL) {
+                    nRet = MV_CC_FreeImageBuffer(_handle, &stFrameOut);
+                    if (nRet != MV_OK) {
+                        ROS_ERROR("Device [%d]: Free Image Buffer fail! nRet [0x%x]\n", _camera_index, nRet);
+                    }
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                continue;
+            }
+            
+            stFrameDecBuf.pBufAddr = stDecodeParam.pDstBuf;
+            stFrameDecBuf.stFrameInfo.nWidth = stDecodeParam.nWidth;
+            stFrameDecBuf.stFrameInfo.nHeight = stDecodeParam.nHeight;
+
+            cv::Mat cv_image = imageMvToCv(stFrameDecBuf, _HIKCAMERA_PARAM.PixelFormat), output;
+            _ImageQueue.push(ImageQueuePacket(cv_image, stFrameOut.stFrameInfo, seq));
+
+        } else {
+            cv::Mat cv_image = imageMvToCv(stFrameOut, _HIKCAMERA_PARAM.PixelFormat), output;
+            _ImageQueue.push(ImageQueuePacket(cv_image, stFrameOut.stFrameInfo, seq));
+        }
+        
 
         if (stFrameOut.pBufAddr != NULL) {
             nRet = MV_CC_FreeImageBuffer(_handle, &stFrameOut);
             if (nRet != MV_OK) {
-                ROS_ERROR("Free Image Buffer fail! nRet [0x%x]\n", nRet);
+                ROS_ERROR("Device [%d]: Free Image Buffer fail! nRet [0x%x]\n", _camera_index, nRet);
             }
         }
 
     }
-    ROS_WARN("Stop GetFrameWorkThread");
+    ROS_WARN("Device [%d]: Stop GetFrameWorkThread", _camera_index);
 }
 
 void Hikcamera::RosPublishWorkThread() {
@@ -712,14 +747,15 @@ void Hikcamera::RosPublishWorkThread() {
     image_transport::ImageTransport it(*_nh);
     image_transport::Publisher pub = it.advertise(_ROS_PARAM.image_publish_topic + std::to_string(_camera_index), 1);
 
+    ROS_WARN("Device [%d]: Init RosPublishWorkThread", _camera_index);
     while (!_start_ros_publish_wt) {
         /* waiting to start */
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    ROS_WARN("Start RosPublishWorkThread");
+    ROS_WARN("Device [%d]: Start RosPublishWorkThread", _camera_index);
     
     while(!_exit_ros_publish_wt) {
-
+        
         auto imagePacket = _ImageQueue.wait_and_pop();
         if (imagePacket) {
             sensor_msgs::ImagePtr msg = imageCvToRos(imagePacket->image, _HIKCAMERA_PARAM.PixelFormat);
@@ -727,17 +763,18 @@ void Hikcamera::RosPublishWorkThread() {
         }
 
     }
-    ROS_WARN("Stop RosPublishWorkThread");
+    ROS_WARN("Device [%d]: Stop RosPublishWorkThread", _camera_index);
 
 }
 
 void Hikcamera::ImageReceivedCallBackWorkThread()
 {
+    ROS_WARN("Device [%d]: Init ImageReceivedCallBackWorkThread", _camera_index);
     while (!_start_image_received_callback_wt) {
         /* waiting to start */
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    ROS_WARN("Start ImageReceivedCallBackWorkThread");
+    ROS_WARN("Device [%d]: Start ImageReceivedCallBackWorkThread", _camera_index);
     
     while(!_exit_image_received_callback_wt) {
 
@@ -749,11 +786,8 @@ void Hikcamera::ImageReceivedCallBackWorkThread()
         }
 
     }
-    ROS_WARN("Stop ImageReceivedCallBackWorkThread");
+    ROS_WARN("Device [%d]: Stop ImageReceivedCallBackWorkThread", _camera_index);
 }
-
-
-
 
 cv::Mat Hikcamera::imageMvToCv(const MV_FRAME_OUT& stFrameOut, HIK_PIXEL_FORMAT mv_format) {
     switch (mv_format) {
@@ -843,7 +877,7 @@ sensor_msgs::ImagePtr Hikcamera::imageCvToRos(const cv::Mat& cv_image, HIK_PIXEL
         case HIK_PIXEL_FORMAT_BayerGB10:
         case HIK_PIXEL_FORMAT_BayerGB12:
         case HIK_PIXEL_FORMAT_BayerGB12Packed:
-            return cv_bridge::CvImage(std_msgs::Header(), "rgb8", output).toImageMsg(); 
+            return cv_bridge::CvImage(std_msgs::Header(), "bgr8", output).toImageMsg(); 
         default:
             throw std::runtime_error("Unsupported pixel format for RGB conversion");
     }
@@ -887,6 +921,33 @@ std::string Hikcamera::timestampToSeconds(uint64_t timestamp_ns) {
     std::stringstream ss;
     ss << seconds << "." << remaining_ns; // 直接拼接整数秒和剩余纳秒
     return ss.str();
+}
+
+bool Hikcamera::printDeviceInfo()
+{
+    if (NULL == _pDeviceInfo)
+    {
+        printf("The Pointer of pstHIKDevInfo is NULL!\n");
+        return false;
+    }
+    if (_pDeviceInfo->nTLayerType == MV_GIGE_DEVICE)
+    {
+        int nIp1 = ((_pDeviceInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0xff000000) >> 24);
+        int nIp2 = ((_pDeviceInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x00ff0000) >> 16);
+        int nIp3 = ((_pDeviceInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8);
+        int nIp4 = (_pDeviceInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff);
+
+        // print current ip and user defined name
+        printf("[device_index %d]:\n", _camera_index);
+        printf("CurrentIp: %d.%d.%d.%d\n" , nIp1, nIp2, nIp3, nIp4);
+        printf("UserDefinedName: %s\n\n" , _pDeviceInfo->SpecialInfo.stGigEInfo.chUserDefinedName);
+    }
+    else
+    {
+        printf("Not support.\n");
+    }
+
+    return true;
 }
 
 

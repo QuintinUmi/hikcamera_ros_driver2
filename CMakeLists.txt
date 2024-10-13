@@ -141,9 +141,9 @@ add_library(Hikcamera_lib
   lib/Hikcamera.cpp
 )
 
-add_library(Camera_Manager_lib
-  include/Camera_Manager.h
-  lib/Camera_Manager.cpp
+add_library(CameraManager_lib
+  include/CameraManager.h
+  lib/CameraManager.cpp
 )
 
 
@@ -151,7 +151,7 @@ add_library(Camera_Manager_lib
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 add_dependencies(Hikcamera_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(Camera_Manager_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(CameraManager_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
 target_link_libraries(Hikcamera_lib
@@ -172,7 +172,7 @@ target_link_libraries(Hikcamera_lib
   X11
   )
 
-target_link_libraries(Camera_Manager_lib
+target_link_libraries(CameraManager_lib
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   Hikcamera_lib
@@ -183,7 +183,7 @@ target_link_libraries(Camera_Manager_lib
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(test1 src/test1.cpp)
-add_executable(multi_cam_grab src/multi_cam_grab.cpp)
+add_executable(multi_cam_ros_pub src/multi_cam_ros_pub.cpp)
 
 
 
@@ -202,13 +202,13 @@ add_executable(multi_cam_grab src/multi_cam_grab.cpp)
 target_link_libraries(test1
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  Camera_Manager_lib
+  CameraManager_lib
 )
 
-target_link_libraries(multi_cam_grab
+target_link_libraries(multi_cam_ros_pub
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  Camera_Manager_lib
+  CameraManager_lib
 )
 
 

@@ -22,17 +22,19 @@
 #include "HIKCAM_PARAM_CFG.h"
 #include "thread_safe_queue.h"
 
+#define IS_SHOW_FRAME_INFO true
+
 namespace hikcamera_ros_driver2{
 
     class Hikcamera {
-        
-        typedef enum _WORK_THREAD_MODE_ {
-            WORK_THREAD_MODE_ROS_PUBLISH,
-            WORK_THREAD_MODE_IMAGE_CALLBACK,
-            WORK_THREAD_MODE_NOT_SELECTED
-        }WORK_THREAD_MODE;
+        public: 
+            typedef enum _WORK_THREAD_MODE_ {
+                WORK_THREAD_MODE_ROS_PUBLISH,
+                WORK_THREAD_MODE_IMAGE_CALLBACK,
+                WORK_THREAD_MODE_NOT_SELECTED
+            }WORK_THREAD_MODE;
 
-        typedef void (*ImageReceivedCb)(cv::Mat& rcv_image, uint64_t timestamp, uint64_t seq);
+            typedef void (*ImageReceivedCb)(cv::Mat& rcv_image, uint64_t timestamp, uint64_t seq);
 
         public:
             Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index);
@@ -80,10 +82,11 @@ namespace hikcamera_ros_driver2{
             static cv::Mat imageMvToCv(const MV_FRAME_OUT& stFrameOut, HIK_PIXEL_FORMAT hik_format);
             static sensor_msgs::ImagePtr imageCvToRos(const cv::Mat& cv_image, HIK_PIXEL_FORMAT hik_format);
 
-
             static uint64_t nDevTimeStampCov(unsigned int nDevTimeStampHigh, unsigned int nDevTimeStampLow);
             static std::string timestampToDateTime(uint64_t timestamp_ns);
             static std::string timestampToSeconds(uint64_t timestamp_ns);
+
+            bool printDeviceInfo();
 
         public:
 
@@ -170,6 +173,11 @@ namespace hikcamera_ros_driver2{
                 std::vector<int> StrobeLineDuration;
                 std::vector<int> StrobeLineDelay;
                 std::vector<int> StrobeLinePreDelay;
+
+                /*Action Control*/
+                int ActionDeviceKey;
+                int ActionGroupMask;
+                int ActionGroupKey;
 
                 /*Transport Layer Control*/
                 HIK_GEV_IEEE_1588 GevIEEE1588;

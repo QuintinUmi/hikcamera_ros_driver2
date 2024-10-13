@@ -3,8 +3,8 @@ Width: 2448
 Height: 2048
 OffsetX: 0
 OffsetY: 0
-PixelFormat: 17301515 # BayerGB 8
-ImageCompressionMode: 2
+PixelFormat: 0x01080009 # BayerRG 8
+ImageCompressionMode: 0
 
 # Acquisition Control
 AcquisitionLineRate: 20
@@ -22,8 +22,8 @@ AutoExposureTimeUpperLimit: 45000
 # Analog Control
 Gain: 25.0
 GainAuto: 2
-AutoGainLowerLimit: 25.0
-AutoGainUpperLimit: 0.0
+AutoGainLowerLimit: 0.0
+AutoGainUpperLimit: 23.9812
 
 Brightness: 100
 
@@ -36,6 +36,11 @@ LineSource: [0, 0]
 StrobeLineDuration: [0, 0]
 StrobeLineDelay: [0, 0]
 StrobeLinePreDelay: [0, 0]
+
+#
+ActionDeviceKey: 0x00000001
+ActionGroupMask: 0x00000001
+ActionGroupKey: 0x00000001
 
 # Transport Layer Control
 GevIEEE1588: 1

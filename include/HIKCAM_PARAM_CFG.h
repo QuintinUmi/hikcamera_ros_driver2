@@ -63,10 +63,6 @@ typedef enum _HIK_TRIGGER_SOURCE_ // TriggerSource
 // nRet = HIK_CC_SetEnuhIKalueByString(handle, "TriggerSource", HIK_Action1);
 #define HIK_TRIGGER_SOURCE_Action1 "Action1"
 
-#define ActionDeviceKey 1
-#define ActionGroupKey 1
-#define ActionGroupMask 1
-
 
 typedef enum _HIK_TRIGGER_ACTIVATION_ // TriggerActivation
 {
