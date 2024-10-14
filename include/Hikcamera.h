@@ -22,7 +22,8 @@
 #include "HIKCAM_PARAM_CFG.h"
 #include "thread_safe_queue.h"
 
-#define IS_SHOW_FRAME_INFO true
+#define IS_SHOW_FRAME_INFO false
+#define DEBUG_GET_FRAME_ONLY false
 
 namespace hikcamera_ros_driver2{
 
@@ -34,7 +35,7 @@ namespace hikcamera_ros_driver2{
                 WORK_THREAD_MODE_NOT_SELECTED
             }WORK_THREAD_MODE;
 
-            typedef void (*ImageReceivedCb)(cv::Mat& rcv_image, uint64_t timestamp, uint64_t seq);
+            typedef void (*ImageReceivedCb)(std::shared_ptr<cv::Mat> rcv_image, uint64_t timestamp, int camera_index);
 
         public:
             Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index);
@@ -83,6 +84,7 @@ namespace hikcamera_ros_driver2{
             static sensor_msgs::ImagePtr imageCvToRos(const cv::Mat& cv_image, HIK_PIXEL_FORMAT hik_format);
 
             static uint64_t nDevTimeStampCov(unsigned int nDevTimeStampHigh, unsigned int nDevTimeStampLow);
+            static ros::Time timestampToRos(const uint64_t timestamp);
             static std::string timestampToDateTime(uint64_t timestamp_ns);
             static std::string timestampToSeconds(uint64_t timestamp_ns);
 
@@ -133,6 +135,7 @@ namespace hikcamera_ros_driver2{
 
             ThreadSafeQueue<ImageQueuePacket> _ImageQueue;
 
+            bool _set_center;
             struct {
 
                 /*Image Format Control*/
