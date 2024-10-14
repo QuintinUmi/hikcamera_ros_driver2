@@ -1,6 +1,23 @@
 # hikcamera_ros_driver2
 
-The **HIGH ROBUSTNESS** hikcamera_ros_driver2 is specifically designed for HIKROBOT Ethernet cameras and is compatible with ROS 1. It constructs a Hikcamera camera controller and a CameraManager for camera management. The Hikcamera integrates various camera parameter setting interfaces, as well as functions for image acquisition, format conversion, image callback, and image publishing. The CameraManager facilitates the management of multiple cameras. Currently, the library supports PTP time synchronization settings for multiple Hikvision Ethernet cameras and GigE Vision Action Command for synchronous triggering. The capture discrepancy among multiple cameras is approximately 0.0001 seconds.
+The **HIGH ROBUST** hikcamera_ros_driver2 is specifically designed for HIKROBOT Ethernet cameras and is compatible with ROS 1. It constructs a Hikcamera camera controller and a CameraManager for camera management. The Hikcamera integrates various camera parameter setting interfaces, as well as functions for image acquisition, format conversion, image callback, and image publishing. The CameraManager facilitates the management of multiple cameras. Currently, the library supports PTP time synchronization settings for multiple Hikvision Ethernet cameras and GigE Vision Action Command for synchronous triggering. Also added the latest HB lossless compression transfer function of Hikrobot camera.
+
+## Features
+
+- **GigE Vision Action Command**
+  
+    Send Action Command based on GigE Vision protocol to achieve synchronized triggering of multiple cameras. (Requires the camera to support Action1 mode)
+    Upon testing, the capture discrepancy among multiple cameras is approximately 0.0001 ~ 0.001 seconds for 2 MV-CS050-10GC-PRO.
+  
+- **HB Lossless Compression Transmission**
+
+    Our tool can set the HB lossless compression transmission mode, which can reduce the transmission bandwidth usage. It is expected to reduce bandwidth usage by **1/2** compared to the original image. HB stream decoding is also integrated to restore the original image format after receiving the image.
+
+- **Convenient Camera Parameter Settings**
+- **Easier Multi-camera Management**
+- **Highly Robust Camera Control and Acquisition**
+
+    There is a high risk of packet loss for webcam data transmission. Our tool greatly avoids exits due to packet loss or decoding failures. **Even if an error occurs, our tool continues to capture**.
 
 ## Dependencies
 
