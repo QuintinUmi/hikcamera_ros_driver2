@@ -49,7 +49,12 @@ $ cd ../.. && catkin_make && source devel/setup.bash
 
     Most of parameters of hikrobot camera can be edit in [**hikcamera-param.yaml**](config/hikcamera-param.yaml) file. You may follow the MVS SDK Developer Guidance or MVS client to set the parameters.
 
-    And in **[ros-node-config.yaml](config/ros-node-config.yaml)**, it is the config for nodes.
+    And in **[ros-node-config.yaml](config/ros-node-config.yaml)**, it is the config for nodes. **If you use Action Command, you need to set the udp broadcast address.**
+
+    ```
+    udp_broadcast_addr: "192.168.1.255"
+    udp_broadcast_port: 3956
+    ```
 
 - Launch Multiple Camera Ros Publisher
 
