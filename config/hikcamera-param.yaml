@@ -2,15 +2,15 @@
 set_center: true
 
 # Image Format Control
-Width: 2400
-Height: 1800
-OffsetX: 0
-OffsetY: 0
+Width: 2240
+Height: 1740
+OffsetX: -32
+OffsetY: -8
 PixelFormat: 0x01080009 # BayerRG 8: 0x01080009  |  Mono 8: 0x01080001
 ImageCompressionMode: 2 # 0: OFF | 2: HB
 
 # Acquisition Control
-AcquisitionLineRate: 10
+AcquisitionLineRate: 17
 AcquisitionLineRateEnable: 1
 
 TriggerMode: 1

@@ -7,15 +7,14 @@
 #include <condition_variable>
 #include <chrono>
 
-#include <std_msgs/String.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/image_encodings.h>
-#include <cv_bridge/cv_bridge.h>
-#include "opencv2/opencv.hpp"       
-
 #include <ros/ros.h>
+#include <std_msgs/String.h>  
+#include <cv_bridge/cv_bridge.h>
+#include "opencv2/opencv.hpp"   
+#include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/Image.h>
 #include <image_transport/image_transport.h>
+#include <sensor_msgs/CompressedImage.h>
 
 #include "MvCameraControl.h"
 
@@ -35,7 +34,7 @@ namespace hikcamera_ros_driver2{
                 WORK_THREAD_MODE_NOT_SELECTED
             }WORK_THREAD_MODE;
 
-            typedef void (*ImageReceivedCb)(std::shared_ptr<cv::Mat> rcv_image, uint64_t timestamp, int camera_index);
+            typedef void (*ImageReceivedCb)(std::shared_ptr<cv::Mat> rcv_image, int mv_format, uint64_t timestamp, int camera_index);
 
         public:
             Hikcamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index);
@@ -80,8 +79,9 @@ namespace hikcamera_ros_driver2{
             int startGrabbing();
             int stopGrabbing();
             
-            static cv::Mat imageMvToCv(const MV_FRAME_OUT& stFrameOut, HIK_PIXEL_FORMAT hik_format);
-            static sensor_msgs::ImagePtr imageCvToRos(const cv::Mat& cv_image, HIK_PIXEL_FORMAT hik_format);
+            static cv::Mat imageMvToCv(const MV_FRAME_OUT& stFrameOut, HIK_PIXEL_FORMAT mv_format);
+            static cv::Mat imageCvFormatting(const cv::Mat& cv_image, HIK_PIXEL_FORMAT mv_format);
+            static sensor_msgs::ImagePtr imageCvToRos(const cv::Mat& cv_image, HIK_PIXEL_FORMAT mv_format);
 
             static uint64_t nDevTimeStampCov(unsigned int nDevTimeStampHigh, unsigned int nDevTimeStampLow);
             static ros::Time timestampToRos(const uint64_t timestamp);

@@ -23,9 +23,10 @@ using namespace hikcamera_ros_driver2;
 
 int CAM_NUM = 0;
 
-void ImageReceivedCallBack(std::shared_ptr<cv::Mat> rcv_image, uint64_t timestamp, int camera_index) {
+void ImageReceivedCallBack(std::shared_ptr<cv::Mat> rcv_image, int mv_format, uint64_t timestamp, int camera_index) {
     ROS_INFO("Camera [%d]: Grabbed Image at timestamp: [%ld]", camera_index, timestamp);
-    cv::imshow(std::string(std::string("image_callback_") + std::to_string(camera_index)).c_str(), *rcv_image);
+    cv::imshow(std::string(std::string("image_callback_") + std::to_string(camera_index)).c_str(), 
+                Hikcamera::imageCvFormatting(*rcv_image, static_cast<HIK_PIXEL_FORMAT>(mv_format)));
     cv::waitKey(1);
 }
 
