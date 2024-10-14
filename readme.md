@@ -30,9 +30,9 @@ $ cd ../.. && catkin_make && source devel/setup.bash
 
 - Config Setting
 
-    Most of parameters of hikrobot camera can be edit in **hikcamera-param.yaml** file. You may follow the MVS SDK Developer Guidance or MVS client to set the parameters.
+    Most of parameters of hikrobot camera can be edit in [**hikcamera-param.yaml**](config/hikcamera-param.yaml) file. You may follow the MVS SDK Developer Guidance or MVS client to set the parameters.
 
-    And in **ros-node-config.yaml**, it is the config for nodes.
+    And in **[ros-node-config.yaml](config/ros-node-config.yaml)**, it is the config for nodes.
 
 - Launch Multiple Camera Ros Publisher
 
@@ -44,7 +44,7 @@ $ cd ../.. && catkin_make && source devel/setup.bash
 
 - Launch Multiple Camera Image Received Callback
 
-    This part is a demo for usage of image callback. You can set your custom callback function by following the sample **multi_cam_rcv_cb.cpp**. You may use following command to launch it.
+    This part is a demo for usage of image callback. You can set your custom callback function by following the sample [**multi_cam_rcv_cb.cpp**](src/multi_cam_rcv_cb.cpp). You may use following command to launch it.
 
     ```bash
     $ roslaunch hikcamera_ros_driver2 multi_cam_rcv_cb.launch
