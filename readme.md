@@ -1,6 +1,6 @@
 # hikcamera_ros_driver2
 
-The hikcamera_ros_driver2 is specifically designed for HIKROBOT Ethernet cameras and is compatible with ROS 1. It constructs a Hikcamera camera controller and a CameraManager for camera management. The Hikcamera integrates various camera parameter setting interfaces, as well as functions for image acquisition, format conversion, image callback, and image publishing. The CameraManager facilitates the management of multiple cameras. Currently, the library supports PTP time synchronization settings for multiple Hikvision Ethernet cameras and GigE Vision Action Command for synchronous triggering. The capture discrepancy among multiple cameras is approximately 0.0001 seconds.
+The **HIGH ROBUSTNESS** hikcamera_ros_driver2 is specifically designed for HIKROBOT Ethernet cameras and is compatible with ROS 1. It constructs a Hikcamera camera controller and a CameraManager for camera management. The Hikcamera integrates various camera parameter setting interfaces, as well as functions for image acquisition, format conversion, image callback, and image publishing. The CameraManager facilitates the management of multiple cameras. Currently, the library supports PTP time synchronization settings for multiple Hikvision Ethernet cameras and GigE Vision Action Command for synchronous triggering. The capture discrepancy among multiple cameras is approximately 0.0001 seconds.
 
 ## Dependencies
 
