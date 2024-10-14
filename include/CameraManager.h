@@ -25,6 +25,7 @@ namespace hikcamera_ros_driver2 {
             bool startAllCamerasGrabbing();
             bool stopAllCamerasGrabbing();
 
+            std::map<uint8_t, std::shared_ptr<Hikcamera>> getCameraList();
             std::shared_ptr<Hikcamera> getCamera(uint8_t camera_index);
 
         private:

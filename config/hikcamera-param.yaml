@@ -1,21 +1,24 @@
+# Other
+set_center: true
+
 # Image Format Control
-Width: 2448
-Height: 2048
-OffsetX: 0
-OffsetY: 0
-PixelFormat: 0x01080009 # BayerRG 8
-ImageCompressionMode: 0
+Width: 2240
+Height: 1740
+OffsetX: -32
+OffsetY: -8
+PixelFormat: 0x01080009 # BayerRG 8: 0x01080009  |  Mono 8: 0x01080001
+ImageCompressionMode: 2 # 0: OFF | 2: HB
 
 # Acquisition Control
-AcquisitionLineRate: 20
+AcquisitionLineRate: 17
 AcquisitionLineRateEnable: 1
 
 TriggerMode: 1
 TriggerSource: -1       # -1: Action1
 TriggerActivation: 0
 
-ExposureTime: 15000.0
-ExposureAuto: 2
+ExposureTime: 18000.0
+ExposureAuto: 0
 AutoExposureTimeLowerLimit: 5000
 AutoExposureTimeUpperLimit: 45000
 
@@ -37,7 +40,7 @@ StrobeLineDuration: [0, 0]
 StrobeLineDelay: [0, 0]
 StrobeLinePreDelay: [0, 0]
 
-#
+# Action Control
 ActionDeviceKey: 0x00000001
 ActionGroupMask: 0x00000001
 ActionGroupKey: 0x00000001

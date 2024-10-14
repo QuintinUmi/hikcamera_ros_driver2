@@ -104,6 +104,12 @@ bool CameraManager::initAllCameras(Hikcamera::WORK_THREAD_MODE work_thread_mode)
                 cRet = false;
             }
         }
+    } else if (work_thread_mode == Hikcamera::WORK_THREAD_MODE_IMAGE_CALLBACK) {
+        for (auto& cam : _cameras) {
+            if (cam.second->init(false) != 0) {
+                cRet = false;
+            }
+        }
     } else {
         for (auto& cam : _cameras) {
             if (cam.second->init(false) != 0) {
@@ -128,6 +134,10 @@ bool CameraManager::stopAllCamerasGrabbing() {
         if(cam.second->stopGrabbing() != MV_OK) cRet = false;
     }
     return cRet;
+}
+
+std::map<uint8_t, std::shared_ptr<Hikcamera>> CameraManager::getCameraList() {
+    return _cameras;
 }
 
 std::shared_ptr<Hikcamera> CameraManager::getCamera(uint8_t camera_index) {

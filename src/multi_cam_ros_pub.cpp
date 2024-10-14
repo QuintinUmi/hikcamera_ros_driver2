@@ -19,12 +19,10 @@
 
 #include "CameraManager.h"
 
-
 using namespace hikcamera_ros_driver2;
 
 void sigintHandler(int sig) {
-    ros::shutdown();  // 显式调用ros::shutdown()
-    sleep(1);
+    ros::shutdown();  
 }
 
 int main(int argc, char *argv[])

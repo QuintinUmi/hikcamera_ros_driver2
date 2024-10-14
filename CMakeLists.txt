@@ -146,12 +146,17 @@ add_library(CameraManager_lib
   lib/CameraManager.cpp
 )
 
+add_library(GigEVisionTools_lib
+  include/GigEVisionTools.h
+  lib/GigEVisionTools.cpp
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 add_dependencies(Hikcamera_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(CameraManager_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(GigEVisionTools_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
 target_link_libraries(Hikcamera_lib
@@ -178,13 +183,13 @@ target_link_libraries(CameraManager_lib
   Hikcamera_lib
   )
 
-
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(test1 src/test1.cpp)
 add_executable(multi_cam_ros_pub src/multi_cam_ros_pub.cpp)
-
+add_executable(multi_cam_rcv_cb src/multi_cam_rcv_cb.cpp)
+add_executable(action_command_brocast src/action_command_brocast.cpp)
 
 
 ## Rename C++ executable without prefix
@@ -211,6 +216,16 @@ target_link_libraries(multi_cam_ros_pub
   CameraManager_lib
 )
 
+target_link_libraries(multi_cam_rcv_cb
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  CameraManager_lib
+)
+
+target_link_libraries(action_command_brocast
+  ${catkin_LIBRARIES}
+  GigEVisionTools_lib
+)
 
 
 

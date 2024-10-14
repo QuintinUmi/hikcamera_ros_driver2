@@ -166,6 +166,8 @@ int32_t Hikcamera::SetImageReceivedCb(ImageReceivedCb cb, void *data) {
 
 void Hikcamera::loadParamFromRosServer() 
 {
+    /*Other*/
+    _nh->param("set_center", _set_center, true);
 
     /*Image Format Control*/
     int PixelFormat, ImageCompressionMode;
@@ -297,16 +299,80 @@ int Hikcamera::setImageFormat(int Width, int Height, int OffsetX, int OffsetY,
         nRet_t |= nRet;
     }
 
-    nRet = MV_CC_SetIntValue(_handle, "OffsetX", OffsetX);
-    if (MV_OK != nRet) {
-        ROS_WARN("Device [%d]: Set OffsetX fail! nRet [0x%x]\n", _camera_index, nRet);
-        nRet_t |= nRet;
-    }
+    if (_set_center) {
+        MVCC_INTVALUE stParam;
+        int nWidthMax, nHeightMax, nWidth, nHeight;
 
-    nRet = MV_CC_SetIntValue(_handle, "OffsetY", OffsetY);
-    if (MV_OK != nRet) {
-        ROS_WARN("Device [%d]: Set OffsetY fail! nRet [0x%x]\n", _camera_index, nRet);
-        nRet_t |= nRet;
+        nRet = MV_CC_GetIntValue(_handle, "WidthMax", &stParam);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Get WidthMax fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
+        nWidthMax = stParam.nCurValue;
+
+        nRet = MV_CC_GetIntValue(_handle, "HeightMax", &stParam);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Get HeightMax fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
+        nHeightMax = stParam.nCurValue;
+
+        nRet = MV_CC_GetIntValue(_handle, "Width", &stParam);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Get Width fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
+        nWidth = stParam.nCurValue;
+
+        nRet = MV_CC_GetIntValue(_handle, "Height", &stParam);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Get Height fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
+        nHeight = stParam.nCurValue;
+
+        nRet = MV_CC_SetIntValue(_handle, "OffsetX", (nWidthMax - nWidth) / 2 + OffsetX);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set OffsetX fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
+
+        nRet = MV_CC_SetIntValue(_handle, "OffsetY", (nHeightMax - nHeight) / 2 + OffsetY);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set OffsetY fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
+
+        int newOffsetX;
+        nRet = MV_CC_GetIntValue(_handle, "OffsetX", &stParam);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Get OffsetX fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
+        newOffsetX = stParam.nCurValue;
+
+        int newOffsetY;
+        nRet = MV_CC_GetIntValue(_handle, "OffsetY", &stParam);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Get OffsetY fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
+        newOffsetY = stParam.nCurValue;
+
+        ROS_WARN("Image centered, new offset value ==> OffsetX: [%d] | OffsetY: [%d]\n", newOffsetX, newOffsetY);
+
+    } else {
+        nRet = MV_CC_SetIntValue(_handle, "OffsetX", OffsetX);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set OffsetX fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
+
+        nRet = MV_CC_SetIntValue(_handle, "OffsetY", OffsetY);
+        if (MV_OK != nRet) {
+            ROS_WARN("Device [%d]: Set OffsetY fail! nRet [0x%x]\n", _camera_index, nRet);
+            nRet_t |= nRet;
+        }
     }
 
     nRet = MV_CC_SetEnumValue(_handle, "PixelFormat", PixelFormat);
@@ -636,6 +702,7 @@ void Hikcamera::GetFrameWorkThread() {
     
     int nRet = MV_OK;
 
+    MV_FRAME_OUT stFrameOut = {0};
     unsigned char * pDstBuf = NULL;
     MV_FRAME_OUT stFrameDecBuf;
     MVCC_INTVALUE stParam;
@@ -643,9 +710,10 @@ void Hikcamera::GetFrameWorkThread() {
     nRet = MV_CC_GetIntValue(_handle, "PayloadSize", &stParam);
     if (MV_OK != nRet)
     {
-        printf("Get PayloadSize fail! nRet [0x%x]\n", nRet);
+        ROS_ERROR("Device [%d]: Get PayloadSize fail! nRet [0x%x]\n", _camera_index, nRet);
         return;
     }
+    auto nPayloadSize = stParam.nCurValue;
 
     ROS_WARN("Device [%d]: Init GetFrameWorkThread", _camera_index);
     while (!_start_get_frame_wt) {
@@ -653,20 +721,28 @@ void Hikcamera::GetFrameWorkThread() {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     ROS_WARN("Device [%d]: Start GetFrameWorkThread", _camera_index);
-    
+
+    auto last_rcv_time = std::chrono::high_resolution_clock::now();
     while(!_exit_get_frame_wt) {
 
         int nRet = MV_OK;
-        static MV_FRAME_OUT stFrameOut = {0};
         static uint64_t seq = 1;
-        static auto last_rcv_time = std::chrono::high_resolution_clock::now();
 
-        // nRet = MV_CC_GetImageBuffer(_handle, &stFrameOut, (1000.f / _HIKCAMERA_PARAM.AcquisitionLineRate) * 1.5); 
-        nRet = MV_CC_GetImageBuffer(_handle, &stFrameOut, 1000); 
+        nRet = MV_CC_GetImageBuffer(_handle, &stFrameOut, (1000.f / _HIKCAMERA_PARAM.AcquisitionLineRate) * 1.5); 
         if (nRet != MV_OK) {
+            
+            if (nRet == 0x8000000d) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>((1000.f / _HIKCAMERA_PARAM.AcquisitionLineRate))));
+                continue;
+            } else if (nRet == 0x80000007) {
+                ROS_ERROR("Device [%d]: No Image Received! nRet [0x%x]\n", _camera_index, nRet);
+                continue;
+            }
+            // std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
             ROS_ERROR("Device [%d]: Get Image fail! nRet [0x%x]\n", _camera_index, nRet);
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
+            
         }
         auto rcv_time = std::chrono::high_resolution_clock::now();
 
@@ -685,11 +761,14 @@ void Hikcamera::GetFrameWorkThread() {
             ROS_INFO_STREAM(debug_msg.c_str());
         }
 
+if (DEBUG_GET_FRAME_ONLY) goto dbg_get_frame_only;
+
         if (_HIKCAMERA_PARAM.ImageCompressionMode == HIK_IMAGE_COMPRESSION_MODE_HB) {
             MV_CC_HB_DECODE_PARAM stDecodeParam = {0};
             // Lossless compression decoding
             stDecodeParam.pSrcBuf = stFrameOut.pBufAddr;
             stDecodeParam.nSrcLen = stFrameOut.stFrameInfo.nFrameLen;
+
             if (pDstBuf == NULL)
             {
                 pDstBuf = (unsigned char *)malloc(sizeof(unsigned char) * (stParam.nCurValue));
@@ -699,7 +778,7 @@ void Hikcamera::GetFrameWorkThread() {
                     nRet = MV_E_RESOURCE;
                     break;
                 }
-            }
+            } 
             stDecodeParam.pDstBuf = pDstBuf;
             stDecodeParam.nDstBufSize = stParam.nCurValue;
             nRet = MV_CC_HB_Decode(_handle, &stDecodeParam);
@@ -729,15 +808,20 @@ void Hikcamera::GetFrameWorkThread() {
             cv::Mat cv_image = imageMvToCv(stFrameOut, _HIKCAMERA_PARAM.PixelFormat), output;
             _ImageQueue.push(ImageQueuePacket(cv_image, stFrameOut.stFrameInfo, seq));
         }
-        
+
+dbg_get_frame_only:
 
         if (stFrameOut.pBufAddr != NULL) {
             nRet = MV_CC_FreeImageBuffer(_handle, &stFrameOut);
             if (nRet != MV_OK) {
                 ROS_ERROR("Device [%d]: Free Image Buffer fail! nRet [0x%x]\n", _camera_index, nRet);
+                nRet = MV_CC_ClearImageBuffer(_handle);
+                if (nRet != MV_OK) {
+                    ROS_ERROR("Device [%d]: Clear Image Buffer fail! nRet [0x%x]\n", _camera_index, nRet);
+                }
+                memset(&stFrameOut, 0, sizeof(MV_FRAME_OUT));
             }
-        }
-
+        }  
     }
     ROS_WARN("Device [%d]: Stop GetFrameWorkThread", _camera_index);
 }
@@ -745,6 +829,7 @@ void Hikcamera::GetFrameWorkThread() {
 void Hikcamera::RosPublishWorkThread() {
 
     image_transport::ImageTransport it(*_nh);
+    std::string publish_topic;
     image_transport::Publisher pub = it.advertise(_ROS_PARAM.image_publish_topic + std::to_string(_camera_index), 1);
 
     ROS_WARN("Device [%d]: Init RosPublishWorkThread", _camera_index);
@@ -759,6 +844,8 @@ void Hikcamera::RosPublishWorkThread() {
         auto imagePacket = _ImageQueue.wait_and_pop();
         if (imagePacket) {
             sensor_msgs::ImagePtr msg = imageCvToRos(imagePacket->image, _HIKCAMERA_PARAM.PixelFormat);
+            uint64_t timestamp = nDevTimeStampCov(imagePacket->stFrameInfo.nDevTimeStampHigh, imagePacket->stFrameInfo.nDevTimeStampLow);
+            msg->header.stamp = timestampToRos(timestamp);
             pub.publish(msg);
         }
 
@@ -780,9 +867,9 @@ void Hikcamera::ImageReceivedCallBackWorkThread()
 
         auto imagePacket = _ImageQueue.wait_and_pop();
         if (imagePacket) {
-            _image_received_cb(imagePacket->image, 
+            _image_received_cb(std::make_shared<cv::Mat>(imagePacket->image), static_cast<int>(_HIKCAMERA_PARAM.PixelFormat),
                             nDevTimeStampCov(imagePacket->stFrameInfo.nDevTimeStampHigh, imagePacket->stFrameInfo.nDevTimeStampLow),
-                            imagePacket->seq);
+                            _camera_index);
         }
 
     }
@@ -812,7 +899,7 @@ cv::Mat Hikcamera::imageMvToCv(const MV_FRAME_OUT& stFrameOut, HIK_PIXEL_FORMAT 
     }
 }
 
-sensor_msgs::ImagePtr Hikcamera::imageCvToRos(const cv::Mat& cv_image, HIK_PIXEL_FORMAT mv_format) {
+cv::Mat Hikcamera::imageCvFormatting(const cv::Mat& cv_image, HIK_PIXEL_FORMAT mv_format) {
 
     cv::Mat output;
     switch (mv_format) {
@@ -860,6 +947,12 @@ sensor_msgs::ImagePtr Hikcamera::imageCvToRos(const cv::Mat& cv_image, HIK_PIXEL
         default:
             throw std::runtime_error("Unsupported pixel format for RGB conversion");
     }
+    return output;
+}
+
+sensor_msgs::ImagePtr Hikcamera::imageCvToRos(const cv::Mat& cv_image, HIK_PIXEL_FORMAT mv_format) {
+
+    cv::Mat output = imageCvFormatting(cv_image, mv_format);
 
     switch (mv_format) {
         case HIK_PIXEL_FORMAT_Mono8:
@@ -887,6 +980,10 @@ sensor_msgs::ImagePtr Hikcamera::imageCvToRos(const cv::Mat& cv_image, HIK_PIXEL
 // nDevTimeStampHigh + nDevTimeStampLow to ns timestamp
 uint64_t Hikcamera::nDevTimeStampCov(unsigned int nDevTimeStampHigh, unsigned int nDevTimeStampLow) {
     return ((uint64_t)nDevTimeStampHigh << 32) | nDevTimeStampLow;
+}
+
+ros::Time Hikcamera::timestampToRos(const uint64_t timestamp) {
+    return ros::Time(static_cast<double>(timestamp) / 1000000000.f);
 }
 
 // ns timestamp to date time
@@ -949,6 +1046,3 @@ bool Hikcamera::printDeviceInfo()
 
     return true;
 }
-
-
-
