@@ -17,7 +17,7 @@ The **HIGH ROBUST** hikcamera_ros_driver2 is specifically designed for HIKROBOT 
 - **Easier Multi-camera Management**
 - **Highly Robust Camera Control and Acquisition**
 
-    There is a high risk of packet loss for webcam data transmission. Our tool greatly avoids exits due to packet loss or decoding failures. **Even if an error occurs, our tool continues to capture**.
+    There is a high risk of packet loss for webcam data transmission. Our tool greatly avoids error exits due to packet loss or decoding failures. **Even if an error occurs, our tool will still continues to grab**.
 
 ## Dependencies
 
