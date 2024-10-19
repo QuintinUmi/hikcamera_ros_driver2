@@ -732,6 +732,7 @@ void Hikcamera::GetFrameWorkThread() {
         if (nRet != MV_OK) {
             
             if (nRet == 0x8000000d) {
+                ROS_ERROR("Device [%d]: No Buffer Can be Output! nRet [0x%x]\n", _camera_index, nRet);
                 std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>((1000.f / _HIKCAMERA_PARAM.AcquisitionLineRate))));
                 continue;
             } else if (nRet == 0x80000007) {

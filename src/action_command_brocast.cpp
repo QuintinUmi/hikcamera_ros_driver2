@@ -38,12 +38,15 @@ int main(int argc, char *argv[]) {
 
     using namespace std::chrono;
     auto next_time = system_clock::now();
+    int offset_t_ms = -1;
+    nh.param("offset_t_ms", offset_t_ms, 0);
     
     next_time += milliseconds(interval - duration_cast<milliseconds>(next_time.time_since_epoch()).count() % interval);
 
     while (ros::ok() && ros::master::check()) {
 
-        std::this_thread::sleep_until(next_time);
+        if (offset_t_ms >= 0)   std::this_thread::sleep_until(next_time + milliseconds(offset_t_ms));
+        else                    std::this_thread::sleep_until(next_time - milliseconds(-offset_t_ms));
 
         if (!gv.send_msg()) {
             ROS_ERROR("Send Action Command Failed!");
@@ -56,7 +59,8 @@ int main(int argc, char *argv[]) {
                     << " ms" << std::endl;
         }
 
-        next_time += milliseconds(interval);
+        // next_time += milliseconds(interval);
+        next_time += milliseconds(interval - duration_cast<milliseconds>(next_time.time_since_epoch()).count() % interval);
     }
 
     return 0;
