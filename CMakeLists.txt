@@ -110,7 +110,7 @@ find_package(OpenCV 4 REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES msg_hikcamera
+  LIBRARIES hikcamera_ros_driver2_lib
   CATKIN_DEPENDS cv_bridge roscpp rospy sensor_msgs std_msgs
   DEPENDS system_lib
 )
