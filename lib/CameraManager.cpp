@@ -1,5 +1,4 @@
 #include "CameraManager.h"
-#include <map>
 
 using namespace hikcamera_ros_driver2;
 
@@ -42,6 +41,13 @@ int CameraManager::enumerateDevices(MV_CC_DEVICE_INFO_LIST* outStDeviceList) {
     return nRet;
 }
 
+bool CameraManager::compareDeviceInfo(const MV_CC_DEVICE_INFO* lhs, const MV_CC_DEVICE_INFO* rhs)  {
+    if (lhs->nMacAddrHigh == rhs->nMacAddrHigh) {
+        return lhs->nMacAddrLow < rhs->nMacAddrLow;
+    }
+    return lhs->nMacAddrHigh < rhs->nMacAddrHigh;
+}
+
 bool CameraManager::addCamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index) {
     if (pDeviceInfo == nullptr) {
         return false; 
@@ -66,13 +72,23 @@ bool CameraManager::addAllCameras(MV_CC_DEVICE_INFO_LIST* pDeviceList) {
         return false;
     }
 
+    // Sort the devices by MAC address
+    std::vector<MV_CC_DEVICE_INFO*> sorted_devices;
     for (unsigned int i = 0; i < pDeviceList->nDeviceNum; ++i) {
-        MV_CC_DEVICE_INFO* pDeviceInfo = pDeviceList->pDeviceInfo[i];
-        if (pDeviceInfo == nullptr) {
-            continue; 
+        if (pDeviceList->pDeviceInfo[i] != nullptr) {
+            sorted_devices.push_back(pDeviceList->pDeviceInfo[i]);
         }
-        addCamera(pDeviceInfo, i); 
     }
+
+    std::sort(sorted_devices.begin(), sorted_devices.end(), compareDeviceInfo);
+
+    _stDeviceList.nDeviceNum = sorted_devices.size();
+    std::memset(_stDeviceList.pDeviceInfo, 0, sizeof(_stDeviceList.pDeviceInfo));
+    for (unsigned int i = 0; i < sorted_devices.size(); ++i) {
+        _stDeviceList.pDeviceInfo[i] = sorted_devices[i];
+        addCamera(sorted_devices[i], i);
+    }
+    
     return true;
 }
 
