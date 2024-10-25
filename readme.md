@@ -6,7 +6,7 @@ The **HIGH ROBUST** hikcamera_ros_driver2 is specifically designed for HIKROBOT 
 
 - **Support GigE Vision Action Command (Requires the camera to support Action1 mode)**
   
-    Send Action Command based on GigE Vision protocol to achieve synchronized triggering of multiple cameras. 
+    This tool can send Action Command based on GigE Vision protocol to achieve synchronized triggering of multiple cameras. 
     Upon testing, the capture discrepancy among multiple cameras is approximately 0.0001 ~ 0.001 seconds for 2 MV-CS050-10GC-PRO.
   
 - **Support HB Lossless Compression Transmission (Requires the camera to support HD compression transport mode)**
