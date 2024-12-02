@@ -46,4 +46,4 @@ ActionGroupMask: 0x00000001
 ActionGroupKey: 0x00000001
 
 # Transport Layer Control
-GevIEEE1588: 1
+GevIEEE1588: 0

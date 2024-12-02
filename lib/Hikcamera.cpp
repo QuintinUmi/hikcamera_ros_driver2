@@ -808,6 +808,8 @@ void Hikcamera::GetFrameWorkThread() {
             if (nRet_p == MV_OK) {  
                 GevIEEE1588StatusString = getGevIEEE1588StatusEnumToString(static_cast<HIK_GEV_IEEE_1588_STATUS>(outValue));
             }
+        } else {
+            GevIEEE1588StatusString = "OFF";
         }
 
         // Log retrieved frame information
