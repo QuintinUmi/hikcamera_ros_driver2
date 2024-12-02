@@ -10,7 +10,7 @@ PixelFormat: 0x01080009 # BayerRG 8: 0x01080009  |  Mono 8: 0x01080001
 ImageCompressionMode: 2 # 0: OFF | 2: HB
 
 # Acquisition Control
-AcquisitionLineRate: 10
+AcquisitionLineRate: 20
 AcquisitionLineRateEnable: 1
 
 TriggerMode: 1

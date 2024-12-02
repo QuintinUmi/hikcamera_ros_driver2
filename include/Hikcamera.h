@@ -21,7 +21,8 @@
 #include "HIKCAM_PARAM_CFG.h"
 #include "thread_safe_queue.h"
 
-#define IS_SHOW_FRAME_INFO false
+#define IS_SHOW_FRAME_INFO true
+#define IS_SHOW_PTP_NOT_SLAVE_WARN true
 #define DEBUG_GET_FRAME_ONLY false
 
 namespace hikcamera_ros_driver2{
@@ -74,7 +75,10 @@ namespace hikcamera_ros_driver2{
                                 std::vector<int> StrobeLineDuration, std::vector<int> StrobeLineDelay, std::vector<int> StrobeLinePreDelay);
 
             int setTransportLayerControl(HIK_GEV_IEEE_1588 GevIEEE1588);
-            
+
+
+            int getParam(std::string nodeName, HIK_VALUE_Type valueType, void* outValue);
+
 
             int startGrabbing();
             int stopGrabbing();
@@ -89,6 +93,7 @@ namespace hikcamera_ros_driver2{
             static std::string timestampToSeconds(uint64_t timestamp_ns);
 
             bool printDeviceInfo();
+            std::string getGevIEEE1588StatusEnumToString(HIK_GEV_IEEE_1588_STATUS GevIEEE1588Status);
 
         public:
 
