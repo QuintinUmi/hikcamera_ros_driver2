@@ -650,6 +650,54 @@ int Hikcamera::setTransportLayerControl(HIK_GEV_IEEE_1588 GevIEEE1588)
 }
 
 
+int Hikcamera::getParam(std::string nodeName, HIK_VALUE_Type valueType, void* outValue) {
+
+    int nRet = MV_OK;
+
+    if (valueType == HIK_INTVALUE) {
+        MVCC_INTVALUE_EX intValue = {0};
+        nRet = MV_CC_GetIntValueEx(_handle, nodeName.c_str(), &intValue);
+        if (MV_OK == nRet) {
+            *(int64_t*)outValue = intValue.nCurValue; 
+        }
+    } else if (valueType == HIK_ENUMVALUE) {
+        MVCC_ENUMVALUE enumValue = {0};
+        nRet = MV_CC_GetEnumValue(_handle, nodeName.c_str(), &enumValue);
+        if (MV_OK == nRet) {
+            *(unsigned int*)outValue = enumValue.nCurValue; 
+        }
+    } else if (valueType == HIK_FLOATVALUE) {
+        MVCC_FLOATVALUE floatValue = {0};
+        nRet = MV_CC_GetFloatValue(_handle, nodeName.c_str(), &floatValue);
+        if (MV_OK == nRet) {
+            *(float*)outValue = floatValue.fCurValue; 
+        }
+    } else if (valueType == HIK_BOOLVALUE) {
+        bool boolValue = false;
+        nRet = MV_CC_GetBoolValue(_handle, nodeName.c_str(), &boolValue);
+        if (MV_OK == nRet) {
+            *(bool*)outValue = boolValue;
+        }
+    } else if (valueType == HIK_STRINGVALUE) {
+        MVCC_STRINGVALUE stringValue = {0};
+        nRet = MV_CC_GetStringValue(_handle, nodeName.c_str(), &stringValue);
+        if (MV_OK == nRet) {
+            *(std::string*)outValue = std::string(stringValue.chCurValue); 
+        }
+    } else {
+        ROS_WARN("Device [%d]: Unsupported value type for node [%s]\n", _camera_index, nodeName.c_str());
+        return MV_E_PARAMETER; 
+    }
+
+    if (MV_OK != nRet) {
+        ROS_WARN("Device [%d]: Get value for node [%s] failed! nRet [0x%x]\n", _camera_index, nodeName.c_str(), nRet);
+    }
+
+    return nRet;
+    
+}
+
+
 int Hikcamera::startGrabbing() 
 {
     int nRet = MV_OK;
@@ -750,16 +798,36 @@ void Hikcamera::GetFrameWorkThread() {
         auto seq_interval = std::chrono::nanoseconds(1000000000 / _HIKCAMERA_PARAM.AcquisitionLineRate);
         seq += ((rcv_time - last_rcv_time) + seq_interval / 2) / seq_interval;
 
+        bool outValue;
+        std::string GevIEEE1588StatusString;
+        int nRet_t = getParam("GevIEEE1588", HIK_BOOLVALUE, &outValue);
+        int nRet_p;
+        if (outValue && nRet_t == MV_OK) {
+            unsigned int outValue;
+            nRet_p = getParam("GevIEEE1588Status", HIK_ENUMVALUE, &outValue);
+            if (nRet_p == MV_OK) {  
+                GevIEEE1588StatusString = getGevIEEE1588StatusEnumToString(static_cast<HIK_GEV_IEEE_1588_STATUS>(outValue));
+            }
+        }
+
         // Log retrieved frame information
         std::string debug_msg;
-        debug_msg = "Device [" + std::to_string(_camera_index) + "] GetOneFrame,nFrameNum[" +
+        debug_msg = "Device [" + std::to_string(_camera_index) + "] GetOneFrame,nFrameNum: [" +
                     std::to_string(stFrameOut.stFrameInfo.nFrameNum) + "], DeviceTimeStamp: [" +
-                    std::to_string(nDevTimeStampCov(stFrameOut.stFrameInfo.nDevTimeStampHigh, stFrameOut.stFrameInfo.nDevTimeStampLow)) + "], Width: [" +
+                    std::to_string(nDevTimeStampCov(stFrameOut.stFrameInfo.nDevTimeStampHigh, stFrameOut.stFrameInfo.nDevTimeStampLow)) + "] GevIEEE1588Status: [" +
+                    GevIEEE1588StatusString + "], Width: [" +
                     std::to_string(stFrameOut.stFrameInfo.nWidth) + "], Height: [" +
                     std::to_string(stFrameOut.stFrameInfo.nHeight) + "], nFrameLen: [" +
                     std::to_string(stFrameOut.stFrameInfo.nFrameLen)+ "]\n";
         if (IS_SHOW_FRAME_INFO) {
             ROS_INFO_STREAM(debug_msg.c_str());
+        }
+        if (IS_SHOW_PTP_NOT_SLAVE_WARN) {
+            if (nRet_p != MV_OK) {
+                ROS_WARN("Device [%d]: Fail to get GevIEEE1588Status! nRet [0x%x]\n", _camera_index, nRet_p);
+            } else if (GevIEEE1588StatusString != std::string("SLAVE")) {
+                ROS_WARN("Device [%d]: GevIEEE1588Status is [%s]\n", _camera_index, GevIEEE1588StatusString.c_str());
+            }
         }
 
 if (DEBUG_GET_FRAME_ONLY) goto dbg_get_frame_only;
@@ -1046,4 +1114,29 @@ bool Hikcamera::printDeviceInfo()
     }
 
     return true;
+}
+
+std::string Hikcamera::getGevIEEE1588StatusEnumToString(HIK_GEV_IEEE_1588_STATUS GevIEEE1588Status) {
+    switch (GevIEEE1588Status) {
+        case HIK_GEV_IEEE_1588_STATUS_INITIALIZING:
+            return "INITIALIZING"; 
+        case HIK_GEV_IEEE_1588_STATUS_FAULTY:
+            return "FAULTY"; 
+        case HIK_GEV_IEEE_1588_STATUS_DISABLED:
+            return "DISABLED"; 
+        case HIK_GEV_IEEE_1588_STATUS_LISTENING:
+            return "LISTENING"; 
+        case HIK_GEV_IEEE_1588_STATUS_PREMASTER:
+            return "PREMASTER"; 
+        case HIK_GEV_IEEE_1588_STATUS_MASTER:
+            return "MASTER"; 
+        case HIK_GEV_IEEE_1588_STATUS_PASSIVE:
+            return "PASSIVE"; 
+        case HIK_GEV_IEEE_1588_STATUS_UNCALIBRATED:
+            return "UNCALIBRATED"; 
+        case HIK_GEV_IEEE_1588_STATUS_SLAVE:
+            return "SLAVE"; 
+        default:
+            return "UNKNOWN"; 
+    }
 }
