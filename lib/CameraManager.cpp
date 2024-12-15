@@ -11,7 +11,7 @@ CameraManager::~CameraManager() {
 
 int CameraManager::enumerateDevices() {
     memset(&_stDeviceList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
-    int nRet = MV_CC_EnumDevices(MV_GIGE_DEVICE, &_stDeviceList);
+    int nRet = MV_CC_EnumDevicesEx2(MV_GIGE_DEVICE, &_stDeviceList, NULL, SortMethod_SerialNumber);
     if (MV_OK != nRet) {
         ROS_ERROR("Enum Devices fail! nRet [0x%x]\n", nRet);
         return nRet;
@@ -19,6 +19,7 @@ int CameraManager::enumerateDevices() {
 
     if (_stDeviceList.nDeviceNum > 0) {
         ROS_INFO("Find Devices:\n");
+        removeDuplicateDevices(&_stDeviceList);
         for (unsigned int i = 0; i < _stDeviceList.nDeviceNum; i++) {
             printf("[device %d]:\n", i);
             MV_CC_DEVICE_INFO* pDeviceInfo = _stDeviceList.pDeviceInfo[i];
@@ -39,6 +40,36 @@ int CameraManager::enumerateDevices(MV_CC_DEVICE_INFO_LIST* outStDeviceList) {
     nRet = enumerateDevices();
     *outStDeviceList = _stDeviceList;
     return nRet;
+}
+
+void CameraManager::removeDuplicateDevices(MV_CC_DEVICE_INFO_LIST* deviceList) {
+    std::vector<MV_CC_DEVICE_INFO*> uniqueDevices;
+
+    for (unsigned int i = 0; i < deviceList->nDeviceNum; i++) {
+        MV_CC_DEVICE_INFO* pDeviceInfo = deviceList->pDeviceInfo[i];
+        if (NULL == pDeviceInfo) {
+            continue;
+        }
+
+        bool isDuplicate = false;
+        for (const auto& existingDevice : uniqueDevices) {
+            if (pDeviceInfo->nMacAddrHigh == existingDevice->nMacAddrHigh &&
+                pDeviceInfo->nMacAddrLow == existingDevice->nMacAddrLow) {
+                isDuplicate = true;
+                break;
+            }
+        }
+
+        if (!isDuplicate) {
+            uniqueDevices.push_back(pDeviceInfo);
+        }
+    }
+
+    unsigned int uniqueDeviceCount = uniqueDevices.size();
+    for (unsigned int i = 0; i < uniqueDeviceCount; i++) {
+        deviceList->pDeviceInfo[i] = uniqueDevices[i];
+    }
+    deviceList->nDeviceNum = uniqueDeviceCount;
 }
 
 bool CameraManager::compareDeviceInfo(const MV_CC_DEVICE_INFO* lhs, const MV_CC_DEVICE_INFO* rhs)  {

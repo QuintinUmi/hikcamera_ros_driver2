@@ -2,15 +2,15 @@
 set_center: true
 
 # Image Format Control
-Width: 2240
-Height: 1740
+Width: 2200
+Height: 1844
 OffsetX: -32
 OffsetY: -10
 PixelFormat: 0x01080009 # BayerRG 8: 0x01080009  |  Mono 8: 0x01080001
 ImageCompressionMode: 2 # 0: OFF | 2: HB
 
 # Acquisition Control
-AcquisitionLineRate: 20
+AcquisitionLineRate: 10
 AcquisitionLineRateEnable: 1
 
 TriggerMode: 1
@@ -46,4 +46,4 @@ ActionGroupMask: 0x00000001
 ActionGroupKey: 0x00000001
 
 # Transport Layer Control
-GevIEEE1588: 0
+GevIEEE1588: 1
