@@ -1,0 +1,49 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/quintinumi/git_package_src/ws_novatel_span_driver/devel/include/**",
+        "/home/quintinumi/git_package_src/ws_velodyne/devel/include/**",
+        "/home/quintinumi/git_package_src/ws_hesai_ros_driver2/devel/include/**",
+        "/home/quintinumi/project/ws_lidar_camera_cal/devel/include/**",
+        "/home/quintinumi/git_package_src/ws_flir_camera_driver/devel/include/**",
+        "/home/quintinumi/project/FAST_LIO/devel/include/**",
+        "/home/quintinumi/git_package_src/FAST-LIVO_ws/devel/include/**",
+        "/home/quintinumi/project/ws_mid360_hikcamera_calibration/devel/include/**",
+        "/home/quintinumi/git_package_src/wpr_simulation/devel/include/**",
+        "/home/quintinumi/git_package_src/ws_livox/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/quintinumi/project/ws_camera_calibration/src/camera_calibration/src/camera_calibration_pkg/include/**",
+        "/home/quintinumi/project/FAST_LIO/src/FAST_LIO/include/**",
+        "/home/quintinumi/git_package_src/FAST-LIVO_ws/src/FAST-LIVO/include/**",
+        "/home/quintinumi/project/ws_hikcamera_ros_driver/src/hikcamera_ros_driver/src/hikcamera_opr/include/**",
+        "/home/quintinumi/project/ws_hikcamera_ros_driver2/src/hikcamera_ros_driver2/include/**",
+        "/home/quintinumi/project/ws_lidar_camera_cal/src/lidar_camera_cal/include/**",
+        "/home/quintinumi/project/ws_mid360_hikcamera_calibration/src/mid360_hikcamera_calibration/src/livox_hikcamera_cal/include/**",
+        "/home/quintinumi/git_package_src/ws_flir_camera_driver/src/flir_camera_driver/spinnaker_camera_driver/include/**",
+        "/home/quintinumi/git_package_src/ws_velodyne/src/velodyne/velodyne_driver/include/**",
+        "/home/quintinumi/git_package_src/ws_velodyne/src/velodyne/velodyne_laserscan/include/**",
+        "/home/quintinumi/git_package_src/ws_velodyne/src/velodyne/velodyne_pcl/include/**",
+        "/home/quintinumi/git_package_src/ws_velodyne/src/velodyne/velodyne_pointcloud/include/**",
+        "/home/quintinumi/git_package_src/FAST-LIVO_ws/src/rpg_vikit/vikit_common/include/**",
+        "/home/quintinumi/git_package_src/FAST-LIVO_ws/src/rpg_vikit/vikit_ros/include/**",
+        "/home/quintinumi/git_package_src/wpr_simulation/src/waterplus_map_tools/include/**",
+        "/home/quintinumi/git_package_src/wpr_simulation/src/wpb_home/wpb_home_bringup/include/**",
+        "/home/quintinumi/git_package_src/wpr_simulation/src/wpb_home/wpb_home_tutorials/include/**",
+        "/home/quintinumi/git_package_src/wpr_simulation/src/wpb_home/wpbh_local_planner/include/**",
+        "/home/quintinumi/git_package_src/wpr_simulation/src/wpr_simulation/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

@@ -14,6 +14,7 @@ namespace hikcamera_ros_driver2 {
 
             int enumerateDevices();
             int enumerateDevices(MV_CC_DEVICE_INFO_LIST* outStDeviceList);
+            void removeDuplicateDevices(MV_CC_DEVICE_INFO_LIST* deviceList);
             static bool compareDeviceInfo(const MV_CC_DEVICE_INFO* lhs, const MV_CC_DEVICE_INFO* rhs);
 
             bool addCamera(MV_CC_DEVICE_INFO* pDeviceInfo, uint8_t camera_index);

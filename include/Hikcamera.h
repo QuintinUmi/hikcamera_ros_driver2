@@ -21,7 +21,7 @@
 #include "HIKCAM_PARAM_CFG.h"
 #include "thread_safe_queue.h"
 
-#define IS_SHOW_FRAME_INFO true
+#define IS_SHOW_FRAME_INFO false
 #define IS_SHOW_PTP_NOT_SLAVE_WARN true
 #define DEBUG_GET_FRAME_ONLY false
 

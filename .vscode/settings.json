@@ -1,0 +1,28 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/quintinumi/git_package_src/ws_novatel_span_driver/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/ws_flir_camera_driver/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/ws_velodyne/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/ws_hesai_ros_driver2/devel/lib/python3/dist-packages",
+        "/home/quintinumi/project/ws_lidar_camera_cal/devel/lib/python3/dist-packages",
+        "/home/quintinumi/project/FAST_LIO/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/FAST-LIVO_ws/devel/lib/python3/dist-packages",
+        "/home/quintinumi/project/ws_mid360_hikcamera_calibration/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/wpr_simulation/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/ws_livox/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/quintinumi/git_package_src/ws_novatel_span_driver/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/ws_flir_camera_driver/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/ws_velodyne/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/ws_hesai_ros_driver2/devel/lib/python3/dist-packages",
+        "/home/quintinumi/project/ws_lidar_camera_cal/devel/lib/python3/dist-packages",
+        "/home/quintinumi/project/FAST_LIO/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/FAST-LIVO_ws/devel/lib/python3/dist-packages",
+        "/home/quintinumi/project/ws_mid360_hikcamera_calibration/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/wpr_simulation/devel/lib/python3/dist-packages",
+        "/home/quintinumi/git_package_src/ws_livox/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ]
+}
