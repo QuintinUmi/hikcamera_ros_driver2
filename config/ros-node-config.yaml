@@ -1,5 +1,5 @@
 image_publish_topic: "/hikcamera/image_"
 
-udp_broadcast_addr: "192.168.1.255"
+udp_broadcast_addr: "192.168.2.255"
 udp_broadcast_port: 3956
 offset_t_ms: 0
