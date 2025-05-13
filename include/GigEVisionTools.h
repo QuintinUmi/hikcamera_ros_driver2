@@ -23,6 +23,8 @@ namespace gvtools
             void setActionCmdConfig(uint16_t deviceKey, uint16_t groupKey, uint16_t groupMask);
 
             bool send_msg();
+            bool isDeviceConnected();  // 检查设备是否在线
+            bool resetConnection();
 
         private:
             int _sockfd;
@@ -37,12 +39,12 @@ namespace gvtools
             unsigned char _msg[20];
             int _msg_length;
 
-        private:
+        public:
             bool _createAndConfigureSocket();
+            bool _reinitializeSocket();  // 重新初始化 Socket
             void _configureAddress();
             bool _msgActionCmdGenerate();
     };
-} 
-
+}
 
 #endif
