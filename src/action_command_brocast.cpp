@@ -5,21 +5,40 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <iostream>
+#include <chrono>
+#include <thread>
+#include <csignal>
 
 #include "GigEVisionTools.h"
 
 #define SHOW_AC_MSG_INFO false
 
 using namespace gvtools;
+using namespace std::chrono;
 
 void sigintHandler(int sig) {
-    ros::shutdown();  
+    ros::shutdown();
+}
+
+void monitorDevice(GigEVisionActionCommand& gv) {
+    while (ros::ok()) {
+        if (!gv.isDeviceConnected()) {
+            ROS_WARN("Device connection lost. Attempting to reconnect...");
+            if (!gv.resetConnection()) {
+                ROS_ERROR("Failed to reconnect to device.");
+            } else {
+                ROS_INFO("Reconnected to device.");
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+    }
 }
 
 int main(int argc, char *argv[]) {
-    
     ros::init(argc, argv, "multi_cam_ros_pub");
     ros::NodeHandle nh;
+
+    signal(SIGINT, sigintHandler);
 
     GigEVisionActionCommand gv;
     std::string udp_broadcast_addr;
@@ -36,32 +55,55 @@ int main(int argc, char *argv[]) {
     nh.param("AcquisitionLineRate", AcquisitionLineRate, 20);
     interval = 1000 / AcquisitionLineRate;
 
-    using namespace std::chrono;
-    auto next_time = system_clock::now();
+    auto next_time = steady_clock::now();
+    next_time += milliseconds(interval);
+
     int offset_t_ms = -1;
     nh.param("offset_t_ms", offset_t_ms, 0);
-    
-    next_time += milliseconds(interval - duration_cast<milliseconds>(next_time.time_since_epoch()).count() % interval);
 
-    while (ros::ok() && ros::master::check()) {
+    std::thread monitorThread(monitorDevice, std::ref(gv));
+    monitorThread.detach();
 
-        if (offset_t_ms >= 0)   std::this_thread::sleep_until(next_time + milliseconds(offset_t_ms));
-        else                    std::this_thread::sleep_until(next_time - milliseconds(-offset_t_ms));
+    while (ros::ok()) {
+        if (!ros::master::check()) {
+            ROS_WARN("ROS Master is not available. Waiting for reconnection...");
+            while (!ros::master::check() && ros::ok()) {
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+            if (!ros::ok()) break;
+            ROS_INFO("Reconnected to ROS Master.");
+        }
 
-        if (!gv.send_msg()) {
-            ROS_ERROR("Send Action Command Failed!");
+        if (offset_t_ms >= 0) {
+            std::this_thread::sleep_until(next_time + milliseconds(offset_t_ms));
+        } else {
+            std::this_thread::sleep_until(next_time - milliseconds(-offset_t_ms));
+        }
+
+        bool sendSuccess = false;
+        for (int retry = 0; retry < 3; ++retry) {
+            if (gv.send_msg()) {
+                sendSuccess = true;
+                break;
+            }
+            ROS_WARN("Retrying to send Action Command...");
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
+        if (!sendSuccess) {
+            ROS_ERROR("Send Action Command failed after retries!");
             continue;
         }
 
         if (SHOW_AC_MSG_INFO) {
             std::cout << "Broadcast message sent at "
-                    << duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count()
-                    << " ms" << std::endl;
+                      << duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count()
+                      << " ms" << std::endl;
         }
 
-        // next_time += milliseconds(interval);
         next_time += milliseconds(interval - duration_cast<milliseconds>(next_time.time_since_epoch()).count() % interval);
     }
 
+    ROS_INFO("Shutting down...");
     return 0;
 }
