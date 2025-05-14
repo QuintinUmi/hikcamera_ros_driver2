@@ -8,17 +8,17 @@ GigEVisionActionCommand::GigEVisionActionCommand() :    _sockfd(-1),
                                                         _nGroupKey(0x00000000),
                                                         _nGroupMask(0x00000000) {
     memset(_msg, 0, sizeof(_msg));
-    if(!_createAndConfigureSocket()) {
-        perror("In _createAndConfigureSocket, failed!\n");
-    }
-}
-GigEVisionActionCommand::~GigEVisionActionCommand() {
-    if (_sockfd >= 0) {
-        close(_sockfd);
-        _sockfd = -1; 
+    if (!_createAndConfigureSocket()) {
+        perror("Failed to create and configure socket during initialization!");
     }
 }
 
+GigEVisionActionCommand::~GigEVisionActionCommand() {
+    if (_sockfd >= 0) {
+        close(_sockfd);
+        _sockfd = -1;
+    }
+}
 
 void GigEVisionActionCommand::setConfig(std::string broadcastAddress, int broadcastPort, 
                                         uint16_t deviceKey, uint16_t groupKey, uint16_t groupMask) {
@@ -36,12 +36,20 @@ void GigEVisionActionCommand::setActionCmdConfig(uint16_t deviceKey, uint16_t gr
     _nDeviceKey = deviceKey;
     _nGroupKey = groupKey;
     _nGroupMask = groupMask;
-    if(!_msgActionCmdGenerate()) {
-        perror("In _msgActionCmdGenerate, failed!\n");
+    if (!_msgActionCmdGenerate()) {
+        perror("Failed to generate Action Command message!");
     }
 }
-// int sockfd, struct sockaddr_in& addr, const unsigned char* buffer, int buffer_length;
+
 bool GigEVisionActionCommand::send_msg() {
+    if (_sockfd < 0) {  // 检查 Socket 是否有效
+        perror("Socket is invalid, attempting to reinitialize...");
+        if (!_reinitializeSocket()) {
+            perror("Failed to reinitialize socket");
+            return false;
+        }
+    }
+
     int ret = sendto(_sockfd, _msg, _msg_length, 0,
                      reinterpret_cast<struct sockaddr*>(&_addr), sizeof(_addr));
     if (ret < 0) {
@@ -51,6 +59,16 @@ bool GigEVisionActionCommand::send_msg() {
     return true;
 }
 
+bool GigEVisionActionCommand::isDeviceConnected() {
+    // 简单的实现，可以发送一个心跳消息或 PING 请求
+    int ret = sendto(_sockfd, _msg, _msg_length, 0,
+                     reinterpret_cast<struct sockaddr*>(&_addr), sizeof(_addr));
+    return (ret >= 0);  // 如果发送成功，则认为设备在线
+}
+
+bool GigEVisionActionCommand::resetConnection() {
+    return _reinitializeSocket();
+}
 
 bool GigEVisionActionCommand::_createAndConfigureSocket() {
     _sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -61,12 +79,19 @@ bool GigEVisionActionCommand::_createAndConfigureSocket() {
 
     int broadcastEnable = 1;
     if (setsockopt(_sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable))) {
-        perror("Error in setting broadcast option");
+        perror("Failed to set broadcast option");
         close(_sockfd);
         return false;
     }
 
     return true;
+}
+
+bool GigEVisionActionCommand::_reinitializeSocket() {
+    if (_sockfd >= 0) {
+        close(_sockfd);  // 关闭旧的 Socket
+    }
+    return _createAndConfigureSocket();
 }
 
 void GigEVisionActionCommand::_configureAddress() {
@@ -99,10 +124,5 @@ bool GigEVisionActionCommand::_msgActionCmdGenerate() {
     _msg[19] = _nGroupMask & 0xFF;   
 
     _msg_length = sizeof(_msg);
-    if (_msg_length != 20) {
-        return false;
-    } else {
-        return true;
-    }
+    return (_msg_length == 20);
 }
-
